@@ -1,0 +1,23 @@
+General setting:
+  alpha: 1                   # rate to control difference between semantic and pragmatic violations
+  lam: 20                     # soft-max parameter
+  k: 5                        # length of observation sequences
+  sample_amount: 50           # amount of k-length samples for each production type
+  learning_parameter: 15      # prob-matching = 1, increments approach MAP
+
+  gens: 50                    # number of generations per simulation run
+  runs: 50                    # number of independent simulation runs
+
+  cost: "brochhagen"
+  kind: "rmd"
+  mutual_exclusivity: False
+  
+  target_lex: [[1, 0, 0], [0, 1, 0], [0,1,1]]     # lexicon of target type
+  target_level: ["pragmatic"]                     # level (literal or pragmatic) of target type
+
+  competitor_lex: [[1, 0, 0], [0, 1, 0], [0,0,1]] # lexicon of competitor type
+  competitor_level: ["pragmatic", "literal"]      # level (literal or pragmatic) of competitor type
+
+
+  result_path: "3x3_3x4_predefined"          # path to store results
+  predefined: "predefined_lexica/comb.txt" # path to predefined lexica
