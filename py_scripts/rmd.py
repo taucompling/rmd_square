@@ -54,7 +54,7 @@ def get_target_bins(type_idx, bins, level, number_of_lexica):
 
 
 def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mutual_exclusivity, result_path, 
-                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, print_x=6):
+                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, all_states=0, all_messages=0, print_x=6):
 
     """[Runs the replicator mutator dynamics
     :param alpha: rate to control difference between semantic and pragmatic violations
@@ -96,13 +96,11 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     :param print_x: number of best x types to print in the results
     :type: int
     """
-    all_messages = messages
-    all_states = states 
 
     if not predefined:
-        if len(target_lex[0]) not in all_messages or len(target_lex) not in states:
+        if len(target_lex[0]) not in all_messages or len(target_lex) not in all_states:
             raise Exception("Target type does not fit the number of states and messages!")
-        if len(competitor_lex[0]) not in all_messages or len(competitor_lex) not in states:
+        if len(competitor_lex[0]) not in all_messages or len(competitor_lex) not in all_states:
             raise Exception("Competitor type does not fit the number of states and messages!")
 
 
@@ -111,34 +109,31 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     print('# Starting,\t\t\t', datetime.datetime.now().replace(microsecond=0))
     lexica, target_index, competitor_index = [], [], []
+
     if predefined: 
+        all_messages = set()
+        all_states = set()
         lexica = get_predefined_lexica(predefined)
         for index, l in enumerate(lexica): 
             s = np.array(l).shape[0]
             m = np.array(l).shape[1]
-
-            if s > states:
-                states = s
-            if m > messages:
-                messages = m
+            all_messages.add(m)
+            all_states.add(s)
             if np.array_equal(l, target_lex):
                 target_index = [index]
             if np.array_equal(l, competitor_lex):
                 competitor_index = [index]
+        all_messages = list(all_messages)
+        all_states = list(all_states)
 
-        all_messages = messages
- 
+
     else: 
-        for message in messages:
-            for state in states:
+        for message in all_messages:
+            for state in all_states:
                 lexicon, target_in, competitor_in = get_lexica(state, message, target_lex, competitor_lex, mutual_exclusivity)
                 lexica += lexicon
                 target_index += target_in
                 competitor_index += competitor_in
-
-
-        messages = max(messages)
-        states = max(states)
 
     bins = get_lexica_bins(lexica, all_states) #To bin types with identical lexica
     target_bins = get_target_bins(target_index[0], bins, target_level, len(lexica))
@@ -147,23 +142,23 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     l_prior = get_prior(lexica, cost, all_states)
     typeList = [LiteralPlayer(lam,lex) for lex in lexica] + [GriceanPlayer(alpha,lam,lex) for lex in lexica]
     likelihoods = [t.sender_matrix for t in typeList]
+
     
-    u = get_utils(typeList,states,messages,lam,alpha,mutual_exclusivity, result_path, predefined)
+    u = get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, result_path, predefined)
     q = get_mutation_matrix(all_states, all_messages,likelihoods,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined)
     print('# Beginning multiple runs,\t', datetime.datetime.now().replace(microsecond=0))
 
     if not os.path.isdir("experiments/" + result_path + "/results/"):
         os.makedirs("experiments/" + result_path + "/" +"results/")
-    f = csv.writer(open('experiments/%s/results/%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-g%d-me%s.csv' %(result_path, kind,str(states),str(messages),lam,alpha,k,sample_amount,learning_parameter,gens,str(mutual_exclusivity)),'w'))
+    f = csv.writer(open('experiments/%s/results/%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-g%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),lam,alpha,k,sample_amount,learning_parameter,gens,str(mutual_exclusivity)),'w'))
     f.writerow(['runID','kind']+['t_ini'+str(x) for x in range(len(typeList))] +\
                ['lam', 'alpha','k','samples','l','gens', 'm_excl'] + ['t_final'+str(x) for x in range(len(typeList))])
     
 
-
-    if os.path.isfile('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(states),str(messages),gens,runs,str(mutual_exclusivity))):
-        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,states,str(messages),gens,runs,str(mutual_exclusivity)), 'a'))
+    if os.path.isfile('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity))):
+        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'a'))
     else: 
-        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(states),str(messages),gens,runs,str(mutual_exclusivity)), 'w'))
+        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'w'))
         f_mean.writerow(['kind','lam','alpha','k','samples','l','gens','runs','m_excl'] + ['t_mean'+str(x) for x in range(len(typeList))])
        
 
@@ -225,7 +220,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
         end_results.append(f"{(get_lexica_representations(typ, lexica))}\n")
     # print("# All bins:", bins)
     
-    print("Finished:\t\t\t", datetime.datetime.now().replace(microsecond=0))
+    print("# Finished:\t\t\t", datetime.datetime.now().replace(microsecond=0))
     for line in end_results:
         print(line)
     with open(f"experiments/{result_path}/results/end_results.txt", "w") as end:

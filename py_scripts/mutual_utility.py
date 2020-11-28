@@ -30,7 +30,7 @@ def pad_lexicon(l, states, messages, pad_value=-100):
     """
     return np.pad(l, [(0, states - l.shape[0]),(0,messages - l.shape[1])], mode='constant', constant_values=pad_value) 
 
-def get_utils(typeList,states,messages,lam,alpha,mutual_exclusivity, result_path, predefined):
+def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, result_path, predefined):
     """calculates expected utiliy of types
 
     :param typeList: list containing already instantiated types of players
@@ -49,25 +49,27 @@ def get_utils(typeList,states,messages,lam,alpha,mutual_exclusivity, result_path
     :rtype: np.array
     """
 
-    if os.path.isfile('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(states),str(messages),lam,alpha,str(mutual_exclusivity))) and not predefined:
+    if os.path.isfile('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(all_states),str(all_messages),lam,alpha,str(mutual_exclusivity))) and not predefined:
         print('# Loading utilities,\t\t', datetime.datetime.now().replace(microsecond=0))
-        return np.genfromtxt('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(states),str(messages),lam,alpha,str(mutual_exclusivity)),delimiter=',')
+        return np.genfromtxt('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(all_states),str(all_messages),lam,alpha,str(mutual_exclusivity)),delimiter=',')
     else:
         print('# Computing utilities, ', datetime.datetime.now().replace(microsecond=0))
         out = np.zeros([len(typeList), len(typeList)])
         for i in tqdm(range(len(typeList))):
             for j in range(len(typeList)):
-                pad_sender_i = pad_lexicon(typeList[i].sender_matrix, states, messages, 1)
-                pad_sender_j = pad_lexicon(typeList[j].sender_matrix, states, messages, 1)
+                states = max([typeList[i].sender_matrix.shape[0],typeList[j].sender_matrix.shape[0]])             
+                messages = max([typeList[i].sender_matrix.shape[1],typeList[j].sender_matrix.shape[1]])
+                pad_sender_i = pad_lexicon(typeList[i].sender_matrix, states, messages, 0)
+                pad_sender_j = pad_lexicon(typeList[j].sender_matrix, states, messages, 0)
 
-                pad_receiver_i = np.transpose(pad_lexicon(np.transpose(typeList[i].receiver_matrix), states, messages, 1)) #TODO mit was padden?
-                pad_receiver_j = np.transpose(pad_lexicon(np.transpose(typeList[j].receiver_matrix), states, messages, 1))
+                pad_receiver_i = np.transpose(pad_lexicon(np.transpose(typeList[i].receiver_matrix), states, messages, 0)) 
+                pad_receiver_j = np.transpose(pad_lexicon(np.transpose(typeList[j].receiver_matrix), states, messages, 0))
 
-                #print("PAD SENDER I", pad_sender_i)
-                #print("PAD SENDER J", pad_sender_j)
+                
                 out[i,j] = (np.sum(pad_sender_i * np.transpose(pad_receiver_j))  / states 
                             + np.sum(pad_sender_j * np.transpose(pad_receiver_i))/ states ) / 2 
-            #raise Exception
+
+
     if not os.path.isdir("experiments/" + result_path +"/" + "matrices/"):
         os.makedirs("experiments/" + result_path + "/" + "matrices/" )
     with open("experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv" %(result_path, str(states), str(messages),lam,alpha,str(mutual_exclusivity)), "w") as file:

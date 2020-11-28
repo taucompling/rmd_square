@@ -12,23 +12,6 @@ import os.path
 
 """Calculates the mutation_matrix"""
 
-def pad_lexicon(l, states, messages, pad_value=-100):
-    """adds pads to the lexicon
-
-    :param l: lexicon
-    :type l: np.array
-    :param states: number of desired states after padding
-    :type states: int
-    :param messages: number of desired messages after padding
-    :type messages: int
-    :param pad_value: value used for padding, default=-100
-    :type pad_value: int
-    :return: padded lexicon
-    :rtype: np.array
-    """
-    return np.pad(l, [(0, states - l.shape[0]),(0,messages - l.shape[1])], mode='constant', constant_values=pad_value) 
-
-
 def normalize(m):
     return m / m.sum(axis=1)[:, np.newaxis]
 
@@ -47,19 +30,14 @@ def summarize_counts(lst,states,messages):
     """
     counter = [0 for _ in range(states*messages)]
     for i in range(len(lst)):
-        s,m = lst[i][0] *messages, lst[i][1]
+        s,m = lst[i][0] * messages, lst[i][1]
         counter[s+m] += 1
     return counter
 
-def get_obs(s_amount,m_amount,k,likelihoods,sample_amount):
+def get_obs(all_states, all_messages, k,likelihoods,sample_amount):
     """Returns summarized counts of k-length <s_i,m_j> production observations as [#(<s_0,m_0>), #(<s_0,m_1), #(<s_1,m_0>, #(s_1,m_1)], ...]] = k
     get production data from all types
 
-    :param s_amount: number of states
-    :type s_amount: int
-    :param m_amount: number of messages
-    :type m_amount: int
-    :param k: sequence length k
     :type k: int
     :param likelihoods: list containig likelihood-lists (sender matrices)
     :type likelihoods: np.array
@@ -68,42 +46,29 @@ def get_obs(s_amount,m_amount,k,likelihoods,sample_amount):
     :return: list containing lists with numbers of sampled sm-pairs ([0,4,0,2], [3,4,3,2]) first sample 0 s_0,m_0, 4 s_1, m_1
     :rtype: list
     """
+        
+    obs = [] #store all produced k-length (s,m) sequences 
 
-    if k == 1 and s_amount == 3 and m_amount == 3: #If k = 1 then no sampling, compute Q with full set of possible observations
-        all_data = [[0,0,0,0,0,0,0,0,1],\
-                [0,0,0,0,0,0,0,1,0],\
-                [0,0,0,0,0,0,1,0,0],\
-                [0,0,0,0,0,1,0,0,0],\
-                [0,0,0,0,1,0,0,0,0],\
-                [0,0,0,1,0,0,0,0,0],\
-                [0,0,1,0,0,0,0,0,0],\
-                [0,1,0,0,0,0,0,0,0],\
-                [1,0,0,0,0,0,0,0,0]]
-        return [all_data for _ in range(432)] #all data for each parent type possible
-    else:
-          
-        obs = [] #store all produced k-length (s,m) sequences 
+    for t in range(len(likelihoods)): # iterating over types
+        produced_obs = [] #store k-length (s,m) sequences of a type
+        type_m_amount = likelihoods[t].shape[1] # get size of type for doubled_state_freq
+        type_s_amount = likelihoods[t].shape[0] 
+        s = list(range(type_s_amount))
+        m = list(range(type_m_amount))
+        atomic_observations = list(product(s,m)) # all possible state message pairs
+        production_vector = likelihoods[t].flatten()
+        state_freq = np.ones(type_s_amount) / float(type_s_amount) #frequency of states s_1,...,s_n 
+        doubled_state_freq = np.column_stack(tuple(state_freq for _ in range(type_m_amount))).flatten() # P(s)
+        sample_vector = production_vector * doubled_state_freq # P(m|s,t_i) * P(s)
 
-        for t in range(len(likelihoods)): # iterating over types
-            produced_obs = [] #store k-length (s,m) sequences of a type
-            type_m_amount = likelihoods[t].shape[1] # get size of type for doubled_state_freq
-            type_s_amount = likelihoods[t].shape[0] 
-            s = list(range(type_s_amount))
-            m = list(range(type_m_amount))
-            atomic_observations = list(product(s,m)) # all possible state message pairs
-            production_vector = likelihoods[t].flatten()
-            state_freq = np.ones(type_s_amount) / float(type_s_amount) #frequency of states s_1,...,s_n 
-            doubled_state_freq = np.column_stack(tuple(state_freq for _ in range(type_m_amount))).flatten() # P(s)
-            sample_vector = production_vector * doubled_state_freq # P(m|s,t_i) * P(s)
+        for _ in range(sample_amount):
+            sampled_idx = [np.random.choice(range(len(atomic_observations)),p=sample_vector) for _ in range(k)] #sample state_message pair
+            sampled_obs = [atomic_observations[x] for x in sampled_idx]
+            produced_obs.append(summarize_counts(sampled_obs, max(all_states), max(all_messages)))
+        obs.append(produced_obs)
+    return obs
 
-            for i in range(sample_amount):
-                sampled_idx = [np.random.choice(range(len(atomic_observations)),p=sample_vector) for _ in range(k)] #sample state_message pair
-                sampled_obs = [atomic_observations[x] for x in sampled_idx]
-                produced_obs.append(summarize_counts(sampled_obs, type_s_amount, type_m_amount))
-            obs.append(produced_obs)
-        return obs
-
-def get_likelihood(obs,likelihoods):
+def get_likelihood(all_states, all_messages, obs,likelihoods):
     """P(parent data|t_i) for all types and its samples
 
     :param obs: summarized counts of sampled ms-pairs for a type
@@ -116,11 +81,26 @@ def get_likelihood(obs,likelihoods):
     out = np.zeros([len(likelihoods), len(obs)]) # matrix to store results in
     for lhi in range(len(likelihoods)):
         flat_lhi = likelihoods[lhi].flatten()
+
         for o in range(len(obs)):
-            if len(flat_lhi) < len(obs[0]): #TODO what if different shape
-                out[lhi,o] = np.prod([flat_lhi[x]**obs[o][x] for x in range(len(flat_lhi))])
-            else:
-                out[lhi,o] = np.prod([flat_lhi[x]**obs[o][x] for x in range(len(obs[o]))])
+            max_messages = max(all_messages)
+            type_messages = likelihoods[lhi].shape[1]
+            if type_messages < max_messages:
+                m_counter = 1
+                prod = []
+                index = 0
+                for x in range(len(obs[o])):
+                    if m_counter <= type_messages:
+                        prod.append(flat_lhi[index]**obs[o][x])
+                        index += 1
+                        m_counter += 1
+                    elif m_counter < max_messages:
+                        m_counter += 1
+                    elif m_counter == max(all_messages):
+                        m_counter = 1
+                out[lhi,o] =  np.prod(prod) 
+            else: 
+                out[lhi,o] = np.prod([flat_lhi[x_i]**obs[o][x_i] for x_i in range(len(obs[o]))])
     return out
 
 def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined):
@@ -134,13 +114,12 @@ def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_par
                %(result_path, s_amount,str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)), delimiter=',')
     else:
         print('# Computing mutation matrix, ', datetime.datetime.now().replace(microsecond=0))
-        obs = get_obs(s_amount,max(m_amount),k,likelihoods,sample_amount) # get production data from all types
+        obs = get_obs(s_amount, m_amount, k,likelihoods,sample_amount) # get production data from all types
         out = np.zeros([len(likelihoods),len(likelihoods)]) #matrix to store Q # len(likelihoods) = type amount
 
         for parent_type in tqdm(range(len(likelihoods))):
             type_obs = obs[parent_type] #Parent production data
-            lhs = get_likelihood(type_obs,likelihoods) #P(parent data|t_i) for all types
-
+            lhs = get_likelihood(s_amount, m_amount, type_obs,likelihoods) #P(parent data|t_i) for all types
             post = normalize(lexica_prior * np.transpose(lhs)) #P(t_j|parent data) for all types; P(t_j)*P(d|t_j)
             parametrized_post = normalize(post**learning_parameter)
             normed_lhs = lhs[parent_type] / np.sum(lhs[parent_type]) # norm P(parent_data|parent_type)

@@ -68,8 +68,6 @@ def get_lexica_bins(lexica_list, all_states):
         concept_indices = []
         current_lex = np.transpose(lex) 
         for concept in current_lex:
-            if np.array_equal(concept, np.array([-100, -100, -100])):
-                continue
             concept_indices.append(concepts.index(tuple(concept)))
         lexica_concepts.append(concept_indices)
 
@@ -133,6 +131,7 @@ def get_prior(lexica_list, cost, all_states):
         concepts += list(product([0,1], repeat=state))
         concepts.remove(tuple(np.zeros(state)))  # remove message false of all states
         concepts.remove(tuple(np.ones(state)))  # remove message true of all states
+
     if cost == "brochhagen": # cost of each concept in 'concepts'
         cost_dict = {(0,0,1): 3, (0,1,0):8, (0,1,1):4, (1,0,0):4, (1,0,1):10, (1,1,0):5, # for three states
                     (0,1):3, (1,0):4}  # for two states
@@ -149,10 +148,6 @@ def get_prior(lexica_list, cost, all_states):
         current_lex = np.transpose(lex)
         lex_val = 1  # probability of current lexicon's concepts
         for concept in current_lex:
-
-            if np.array_equal(concept, np.array([-100, -100, -100])):
-                continue
-
             lex_val *= cost_dict[tuple(concept)]
         out.append(lex_val)
     out = out + out  # double for two types of linguistic behavior

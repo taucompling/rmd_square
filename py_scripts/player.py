@@ -30,7 +30,9 @@ class LiteralPlayer:
         self.receiver_matrix =  self.receiver_selection_matrix()
         self.type = "LITERAL"
 
-   
+    def __repr__(self):
+        return f"Type: {self.type}\nLex:\n{self.lexicon}\nSpeaker matrix:\n{self.sender_matrix}\nHearer matrix:\n{self.receiver_matrix}"
+
     def sender_selection_matrix(self,l):
         """speaker matrix: states in row, message in columns
 
@@ -77,6 +79,9 @@ class GriceanPlayer:
         self.receiver_matrix = self.receiver_selection_matrix()
         self.type = "PRAGMATIC"
 
+    def __repr__(self):
+        return f"Type: {self.type}\nLex:\n{self.lexicon}\nSpeaker matrix:\n{self.sender_matrix}\nHearer matrix:\n{self.receiver_matrix}"
+        
     def sender_selection_matrix(self,l):
         """pragmatic speaker, states in row, message in columns
 
