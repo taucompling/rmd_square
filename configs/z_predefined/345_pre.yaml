@@ -11,5 +11,13 @@ General setting:
   cost: "brochhagen"
   kind: "rmd"
   mutual_exclusivity: False
-  result_path: "3x3_predefined"          # path to store results
-  predefined: "predefined_lexica/3x3.txt" # path to predefined lexica
+  
+  target_lex: [[0, 0, 0], [0, 0, 0], [1,1,1]]     # lexicon of target type
+  target_level: ["pragmatic"]                     # level (literal or pragmatic) of target type
+
+  competitor_lex: [[0, 0, 0], [0, 0, 0], [1,1,1]] # lexicon of competitor type
+  competitor_level: ["pragmatic", "literal"]      # level (literal or pragmatic) of competitor type
+
+  print_x: 2
+  result_path: "3x3_3x4_predefined"          # path to store results
+  predefined: "predefined_lexica/comb.txt" # path to predefined lexica

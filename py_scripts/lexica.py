@@ -1,9 +1,29 @@
 # generation of lexica and prior
 import numpy as np
-from itertools import product, combinations, combinations_with_replacement
+from itertools import product, combinations, combinations_with_replacement, permutations
 
+def get_indices(max_message, m_amount):
+    per = set(permutations([0 for x in range(m_amount)] + [1 for x in range(max_message - m_amount)]))
+    indices = []
+    for p in per:
+        ix = np.where(np.array(p)==1)
+        indices.append(ix)
+    return indices
 
-def get_lexica(s_amount, m_amount, target_lex, competitor_lex, mutual_exclusivity=True):
+def pad_lex(indices, lex, row_column):
+    padded_lex = []
+    for idx in indices:
+        new_lex = lex
+        for i in idx[0]:
+            if row_column == "column":
+                new_lex = np.insert(new_lex, i, values=-5, axis=1)
+            else:
+                new_lex = np.insert(new_lex, i, values=-5, axis=0)
+                
+        padded_lex.append(new_lex)
+    return padded_lex
+
+def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutual_exclusivity=True):
     """creates lexica
 
     :param s_amount: number of columns in lexicon
@@ -16,38 +36,33 @@ def get_lexica(s_amount, m_amount, target_lex, competitor_lex, mutual_exclusivit
     :type: list
     :param mutual_exclusivity: no concept assigned to more than one message, defaults to True
     :type mutual_exclusivity: bool, optional
-    :return: list with transposed lexica (np.arrays): states = rows, messages = columns, list with target type, list with competitor type
+    :return: list with lexica (np.arrays): states = rows, messages = columns, list with target type, list with competitor type
     :rtype: list, list, list
     """
     target_index, competitor_index = [], []
     columns = list(product([0., 1.], repeat=s_amount)) 
     columns.remove(tuple(np.zeros(s_amount)))  # remove message false of all states
     columns.remove(tuple(np.ones(s_amount)))  # remove message true of all states
-    if mutual_exclusivity:
-        # no concept assigned to more than one message
+
+    if max_message != m_amount:
+        indices_messages = get_indices(max_message, m_amount)
+    if mutual_exclusivity:  # no concept assigned to more than one message
         matrix = list(combinations(columns, r=m_amount)) #combinations = not repeated element
-        out = []
-        for typ, mrx in enumerate(matrix):
-            lex = np.array([mrx[i] for i in range(m_amount)]) # converts tuples in matrix to np.arrays (war mal s_amount)
-            lex = np.transpose(np.array([mrx[i] for i in range(m_amount)])) # transposed # war mal s_amount
-            if np.array_equal(lex, np.array(target_lex)):
-                target_index.append(typ)
-            if np.array_equal(lex, np.array(competitor_lex)):
-                competitor_index.append(typ)
-            out.append(lex)
-    else:
-        # If we allow for symmetric lexica (=repeated elements)
+    else: # If we allow for symmetric lexica (=repeated elements)
         matrix = list(product(columns, repeat=m_amount))
-        # matrix = list(combinations_with_replacement(columns,m_amount)) #only 112 types
-        out = []
-        for typ, mrx in enumerate(matrix):
-            lex = np.array([mrx[i] for i in range(m_amount)]) # war mal in range s_amount
-            lex = np.transpose(np.array([mrx[i] for i in range(m_amount)])) # war mal s_amount
-            if np.array_equal(lex, np.array(target_lex)):
-                target_index.append(typ)
-            if np.array_equal(lex, np.array(competitor_lex)):
-                competitor_index.append(typ)
-            out.append(lex)
+    out = []
+    for typ, mrx in enumerate(matrix):
+        lex = np.array([mrx[i] for i in range(m_amount)]) 
+        lex = [np.transpose(np.array([mrx[i] for i in range(m_amount)]))]
+        if np.array_equal(lex[0], np.array(target_lex)):
+            target_index.append(len(out))
+        if np.array_equal(lex[0], np.array(competitor_lex)):
+            competitor_index.append(len(out))
+        if max_message != m_amount:
+            lex = pad_lex(indices_messages, lex[0], "column")
+                
+        out += lex
+
     return out, target_index, competitor_index # target_index and competitor_index may be empty
 
 
@@ -68,6 +83,9 @@ def get_lexica_bins(lexica_list, all_states):
         concept_indices = []
         current_lex = np.transpose(lex) 
         for concept in current_lex:
+            if -5 in concept:
+                continue
+
             concept_indices.append(concepts.index(tuple(concept)))
         lexica_concepts.append(concept_indices)
 
@@ -148,6 +166,8 @@ def get_prior(lexica_list, cost, all_states):
         current_lex = np.transpose(lex)
         lex_val = 1  # probability of current lexicon's concepts
         for concept in current_lex:
+            if -5 in concept:
+                continue
             lex_val *= cost_dict[tuple(concept)]
         out.append(lex_val)
     out = out + out  # double for two types of linguistic behavior

@@ -68,7 +68,7 @@ def get_obs(all_states, all_messages, k,likelihoods,sample_amount):
         obs.append(produced_obs)
     return obs
 
-def get_likelihood(all_states, all_messages, obs,likelihoods):
+def get_likelihood(obs,likelihoods):
     """P(parent data|t_i) for all types and its samples
 
     :param obs: summarized counts of sampled ms-pairs for a type
@@ -83,24 +83,7 @@ def get_likelihood(all_states, all_messages, obs,likelihoods):
         flat_lhi = likelihoods[lhi].flatten()
 
         for o in range(len(obs)):
-            max_messages = max(all_messages)
-            type_messages = likelihoods[lhi].shape[1]
-            if type_messages < max_messages:
-                m_counter = 1
-                prod = []
-                index = 0
-                for x in range(len(obs[o])):
-                    if m_counter <= type_messages:
-                        prod.append(flat_lhi[index]**obs[o][x])
-                        index += 1
-                        m_counter += 1
-                    elif m_counter < max_messages:
-                        m_counter += 1
-                    elif m_counter == max(all_messages):
-                        m_counter = 1
-                out[lhi,o] =  np.prod(prod) 
-            else: 
-                out[lhi,o] = np.prod([flat_lhi[x_i]**obs[o][x_i] for x_i in range(len(obs[o]))])
+            out[lhi,o] = np.prod([flat_lhi[x_i]**obs[o][x_i] for x_i in range(len(obs[o]))])
     return out
 
 def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined):
@@ -116,15 +99,15 @@ def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_par
         print('# Computing mutation matrix, ', datetime.datetime.now().replace(microsecond=0))
         obs = get_obs(s_amount, m_amount, k,likelihoods,sample_amount) # get production data from all types
         out = np.zeros([len(likelihoods),len(likelihoods)]) #matrix to store Q # len(likelihoods) = type amount
-
+        
         for parent_type in tqdm(range(len(likelihoods))):
             type_obs = obs[parent_type] #Parent production data
-            lhs = get_likelihood(s_amount, m_amount, type_obs,likelihoods) #P(parent data|t_i) for all types
+            # print(type_obs)
+            lhs = get_likelihood(type_obs,likelihoods) #P(parent data|t_i) for all types
             post = normalize(lexica_prior * np.transpose(lhs)) #P(t_j|parent data) for all types; P(t_j)*P(d|t_j)
             parametrized_post = normalize(post**learning_parameter)
             normed_lhs = lhs[parent_type] / np.sum(lhs[parent_type]) # norm P(parent_data|parent_type)
             out[parent_type] = np.dot(np.transpose(normed_lhs),parametrized_post)
-    
         q = out
         with open('experiments/%s/matrices/qmatrix-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' %(result_path, str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)),'w') as file:
             f_q = csv.writer(file)

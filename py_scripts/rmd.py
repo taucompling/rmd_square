@@ -7,6 +7,7 @@ from random import sample
 from itertools import product
 from py_scripts.player import LiteralPlayer,GriceanPlayer
 from py_scripts.lexica import get_lexica,get_prior,get_lexica_bins
+from py_scripts.process_predefined_lexica import  get_predefined_lexica
 from py_scripts.mutation_matrix import summarize_counts, get_obs, get_mutation_matrix, get_likelihood
 from py_scripts.mutual_utility import get_utils
 from py_scripts.plots.plot_progress import plot_progress
@@ -22,20 +23,13 @@ def get_type_bin(type_idx, bins):
     for b in range(len(bins)):
         if type_idx in bins[b]:
             return b
-    
-def get_predefined_lexica(path):
-    """Converts lexica from txt.document to numpy arrays and pads them with -100
-
-    :param path: path to lexica
-    :type path: string
-    :return: list with lexica, all with the same shape
-    :rtype: list
-    """
-    with open(path, "r") as input_lex:
-        return [np.array(eval(lex)) for lex in input_lex]
 
 def get_lexica_representations(type, lexica):
-    return f"{check_literal_or_pragmatic(type, lexica)}:\n{lexica[type-len(lexica)]}"
+    l = lexica[type-len(lexica)]
+    for column in l.T:
+        if -5 in column:
+            l = np.delete(l, np.where(l == -5)[1][0], 1)
+    return f"{check_literal_or_pragmatic(type, lexica)}:\n{l}"
 
 def check_literal_or_pragmatic(type, lexica):
     if type > len(lexica)-1:
@@ -54,7 +48,7 @@ def get_target_bins(type_idx, bins, level, number_of_lexica):
 
 
 def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mutual_exclusivity, result_path, 
-                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, all_states=0, all_messages=0, print_x=6):
+                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, print_x=6):
 
     """[Runs the replicator mutator dynamics
     :param alpha: rate to control difference between semantic and pragmatic violations
@@ -96,45 +90,33 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     :param print_x: number of best x types to print in the results
     :type: int
     """
+ 
+    print('# Starting,\t\t\t', datetime.datetime.now().replace(microsecond=0))
+    if not os.path.isdir("experiments/" + result_path):
+        os.makedirs("experiments/" + result_path)
 
-    if not predefined:
+    all_messages = messages
+    all_states = states
+    if predefined: 
+        lexica, target_index, competitor_index, all_states, all_messages = get_predefined_lexica(predefined, target_lex, competitor_lex)
+
+
+    else: 
         if len(target_lex[0]) not in all_messages or len(target_lex) not in all_states:
             raise Exception("Target type does not fit the number of states and messages!")
         if len(competitor_lex[0]) not in all_messages or len(competitor_lex) not in all_states:
             raise Exception("Competitor type does not fit the number of states and messages!")
 
-
-    if not os.path.isdir("experiments/" + result_path):
-        os.makedirs("experiments/" + result_path)
-
-    print('# Starting,\t\t\t', datetime.datetime.now().replace(microsecond=0))
-    lexica, target_index, competitor_index = [], [], []
-
-    if predefined: 
-        all_messages = set()
-        all_states = set()
-        lexica = get_predefined_lexica(predefined)
-        for index, l in enumerate(lexica): 
-            s = np.array(l).shape[0]
-            m = np.array(l).shape[1]
-            all_messages.add(m)
-            all_states.add(s)
-            if np.array_equal(l, target_lex):
-                target_index = [index]
-            if np.array_equal(l, competitor_lex):
-                competitor_index = [index]
-        all_messages = list(all_messages)
-        all_states = list(all_states)
-
-
-    else: 
+        lexica, target_index, competitor_index = [], [], []
         for message in all_messages:
             for state in all_states:
-                lexicon, target_in, competitor_in = get_lexica(state, message, target_lex, competitor_lex, mutual_exclusivity)
+                lexicon, target_in, competitor_in = get_lexica(state, message, max(all_messages), target_lex, competitor_lex, mutual_exclusivity)
                 lexica += lexicon
                 target_index += target_in
                 competitor_index += competitor_in
 
+    #for l in lexica:
+    #    print(l)
     bins = get_lexica_bins(lexica, all_states) #To bin types with identical lexica
     target_bins = get_target_bins(target_index[0], bins, target_level, len(lexica))
     competitor_bins = get_target_bins(competitor_index[0], bins, competitor_level, len(lexica))
@@ -145,7 +127,9 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     
     u = get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, result_path, predefined)
+
     q = get_mutation_matrix(all_states, all_messages,likelihoods,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined)
+    # raise Exception    
     print('# Beginning multiple runs,\t', datetime.datetime.now().replace(microsecond=0))
 
     if not os.path.isdir("experiments/" + result_path + "/results/"):
@@ -169,7 +153,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     for i in range(runs):
         p = np.random.dirichlet(np.ones(len(typeList))) # unbiased random starting state
         p_initial = p
-        for r in range(gens):
+        for _ in range(gens):
             if kind == 'rmd':
                 pPrime = p * [np.sum(u[t,] * p)  for t in range(len(typeList))] # type_prob * fitness
                 pPrime = pPrime / np.sum(pPrime) # / average fitness in population 
@@ -212,7 +196,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     f"# Incumbent type: {inc} with proportion {p_mean[inc]}\n",
     f"{get_lexica_representations(inc, lexica)}\n",
     f"# The bin of the incumbent {inc_bin}\n",
-    f"# Bin # {bins[inc_bin]}\n",
+    f"# Bin: {bins[inc_bin]}\n",
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n",    
     f"# 6 best types: \n"]
     for typ in sorted_best_x:

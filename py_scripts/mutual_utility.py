@@ -14,22 +14,6 @@ import os.path
 
 """Calculates mutual utilities"""
 
-def pad_lexicon(l, states, messages, pad_value=-100):
-    """adds pads to the lexicon
-
-    :param l: lexicon
-    :type l: np.array
-    :param states: number of desired states after padding
-    :type states: int
-    :param messages: number of desired messages after padding
-    :type messages: int
-    :param pad_value: value used for padding, default=-100
-    :type pad_value: int
-    :return: padded lexicon
-    :rtype: np.array
-    """
-    return np.pad(l, [(0, states - l.shape[0]),(0,messages - l.shape[1])], mode='constant', constant_values=pad_value) 
-
 def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, result_path, predefined):
     """calculates expected utiliy of types
 
@@ -48,7 +32,8 @@ def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, 
     :return: utility matrix
     :rtype: np.array
     """
-
+    states = max(all_states)             
+    messages = max(all_messages)
     if os.path.isfile('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(all_states),str(all_messages),lam,alpha,str(mutual_exclusivity))) and not predefined:
         print('# Loading utilities,\t\t', datetime.datetime.now().replace(microsecond=0))
         return np.genfromtxt('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(all_states),str(all_messages),lam,alpha,str(mutual_exclusivity)),delimiter=',')
@@ -56,19 +41,18 @@ def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, 
         print('# Computing utilities, ', datetime.datetime.now().replace(microsecond=0))
         out = np.zeros([len(typeList), len(typeList)])
         for i in tqdm(range(len(typeList))):
-            for j in range(len(typeList)):
-                states = max([typeList[i].sender_matrix.shape[0],typeList[j].sender_matrix.shape[0]])             
-                messages = max([typeList[i].sender_matrix.shape[1],typeList[j].sender_matrix.shape[1]])
-                pad_sender_i = pad_lexicon(typeList[i].sender_matrix, states, messages, 0)
-                pad_sender_j = pad_lexicon(typeList[j].sender_matrix, states, messages, 0)
+            for j in range(i, len(typeList)): # symmetric matrix, just iterated over half of it
 
-                pad_receiver_i = np.transpose(pad_lexicon(np.transpose(typeList[i].receiver_matrix), states, messages, 0)) 
-                pad_receiver_j = np.transpose(pad_lexicon(np.transpose(typeList[j].receiver_matrix), states, messages, 0))
+                sender_i = typeList[i].sender_matrix
+                sender_j = typeList[j].sender_matrix
 
-                
-                out[i,j] = (np.sum(pad_sender_i * np.transpose(pad_receiver_j))  / states 
-                            + np.sum(pad_sender_j * np.transpose(pad_receiver_i))/ states ) / 2 
+                receiver_i = typeList[i].receiver_matrix
+                receiver_j = typeList[j].receiver_matrix
 
+                out[i,j] = (np.sum(sender_i * np.transpose(receiver_j))  / states 
+                            + np.sum(sender_j * np.transpose(receiver_i))/ states ) / 2
+                out[j,i] = out[i, j] 
+ 
 
     if not os.path.isdir("experiments/" + result_path +"/" + "matrices/"):
         os.makedirs("experiments/" + result_path + "/" + "matrices/" )
