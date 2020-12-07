@@ -14,7 +14,7 @@ import os.path
 
 """Calculates mutual utilities"""
 
-def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, result_path, predefined):
+def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, result_path, predefined, state_priors):
     """calculates expected utiliy of types
 
     :param typeList: list containing already instantiated types of players
@@ -34,6 +34,7 @@ def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, 
     """
     states = max(all_states)             
     messages = max(all_messages)
+    state_priors = state_priors[..., None] 
     if os.path.isfile('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(all_states),str(all_messages),lam,alpha,str(mutual_exclusivity))) and not predefined:
         print('# Loading utilities,\t\t', datetime.datetime.now().replace(microsecond=0))
         return np.genfromtxt('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(all_states),str(all_messages),lam,alpha,str(mutual_exclusivity)),delimiter=',')
@@ -49,8 +50,8 @@ def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, 
                 receiver_i = typeList[i].receiver_matrix
                 receiver_j = typeList[j].receiver_matrix
 
-                out[i,j] = (np.sum(sender_i * np.transpose(receiver_j))  / states 
-                            + np.sum(sender_j * np.transpose(receiver_i))/ states ) / 2
+                out[i,j] = np.sum(sender_i * np.transpose(receiver_j) * state_priors) + np.sum(sender_j * np.transpose(receiver_i)* state_priors)
+                
                 out[j,i] = out[i, j] 
  
 

@@ -156,6 +156,10 @@ def get_prior(lexica_list, cost, all_states):
     elif cost == "building_blocks":
         cost_dict = {(0,0,1): 8, (0,1,0): 21, (0,1,1): 8, (1,0,0): 7, (1,0,1): 18, (1,1,0): 10, # for three states
                     (0,1):8, (1,0):7}  # for two states
+    
+    elif cost == "equal":
+        cost_dict = {(0,0,1): 1, (0,1,0): 1, (0,1,1): 1, (1,0,0): 1, (1,0,1): 1, (1,1,0): 1, # for three states
+            (0,1):1, (1,0):1}  # for two states
     else:
         raise Exception("Cost function is not defined. Please define it in lexica.py")
 

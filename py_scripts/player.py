@@ -16,7 +16,7 @@ def normalize(m):
     return m 
 
 class LiteralPlayer:
-    def __init__(self,lam,lexicon):
+    def __init__(self,lam,lexicon, state_priors):
         """LiteralPlayer
 
         :param lam: lamda for softmax
@@ -26,9 +26,11 @@ class LiteralPlayer:
         """
         self.lam = lam
         self.lexicon = lexicon
+        self.state_priors = state_priors
         self.sender_matrix = self.sender_selection_matrix()
         self.receiver_matrix =  self.receiver_selection_matrix()
         self.type = "LITERAL"
+        
 
     def __repr__(self):
         return f"Type: {self.type}\nLex:\n{self.lexicon}\nSpeaker matrix:\n{self.sender_matrix}\nHearer matrix:\n{self.receiver_matrix}"
@@ -52,19 +54,23 @@ class LiteralPlayer:
         return normalize(m)
 
     def receiver_selection_matrix(self):
-        """ hearer matrix: messages in rows, states in columns
-        Takes transposed lexicon and normalize row-wise (prior over states plays no role as it's currently uniform)"""
-        m = normalize(np.transpose(self.lexicon))
+        """ hearer matrix: messages in rows, states in columns"""
+
+        weighted_lex = np.zeros(np.shape(self.lexicon))
+        for i, row in enumerate(self.lexicon):
+            weighted_lex[i] = float(self.state_priors[i]) * row
+
+        m = normalize(np.transpose(weighted_lex))
         for r in range(np.shape(m)[0]):
             if sum(m[r]) == 0 or math.isnan(sum(m[r])): # added isnan
-                for c in range(np.shape(m)[1]):
-                    m[r,c] = 1. / np.shape(m)[0] # split equally
+                m[r] = self.state_priors
+
         return m
 
 
 
 class GriceanPlayer:
-    def __init__(self,alpha, lam, lexicon):
+    def __init__(self,alpha, lam, lexicon, state_priors):
         """
         :param alpha: rate to control difference between semantic and pragmatic violations
         :type alpha: int
@@ -76,6 +82,7 @@ class GriceanPlayer:
         self.alpha = alpha
         self.lam = lam
         self.lexicon = lexicon
+        self.state_priors = state_priors
         self.sender_matrix = self.sender_selection_matrix()
         self.receiver_matrix = self.receiver_selection_matrix()
         self.type = "PRAGMATIC"
@@ -98,14 +105,13 @@ class GriceanPlayer:
                 if l[row, column] == -5:
                     sender_sel[row, column] = 0 
 
-
         return normalize(sender_sel)
 
     def receiver_selection_matrix(self):
         """
-        hearer matrix: messages in rows, states in columns
-        Takes transposed sender matrix and normalize row-wise (prior over states plays no role as it's currently uniform)"""
+        hearer matrix: messages in rows, states in columns"""
 
+        #print(self.lexicon)
         literalsender = np.zeros(np.shape(self.lexicon))
         for i in range(np.shape(self.lexicon)[0]):
             for j in range(np.shape(self.lexicon)[1]): 
@@ -114,12 +120,14 @@ class GriceanPlayer:
                 else:               
                     literalsender[i,j] = np.exp(self.lam * self.lexicon[i,j])
 
-        literalsender = normalize(literalsender)
+        for i, row in enumerate(literalsender):
+            literalsender[i] = float(self.state_priors[i]) * row
+
         rec_sel = normalize(np.transpose(literalsender))
         for row in range(rec_sel.shape[0]):
-            for column in range(rec_sel.shape[1]):
-                if sum(rec_sel[row]) == 0 or math.isnan(sum(rec_sel[row])):
-                    rec_sel[row, column] = 1. / rec_sel.shape[1] 
+            if sum(rec_sel[row]) == 0 or math.isnan(sum(rec_sel[row])):
+                rec_sel[row] = self.state_priors
+
         return rec_sel
 
 

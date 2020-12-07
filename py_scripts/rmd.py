@@ -18,6 +18,7 @@ import sys
 import datetime
 import csv
 import os.path
+from fractions import Fraction
 
 def get_type_bin(type_idx, bins):
     for b in range(len(bins)):
@@ -46,9 +47,15 @@ def get_target_bins(type_idx, bins, level, number_of_lexica):
             target_bins.append(get_type_bin(type_idx + number_of_lexica, bins))
     return target_bins
 
+def conv_frac(s):
+    """
+    converts fraction string to float
+
+    """
+    return float(sum(Fraction(x) for x in s.split()))
 
 def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mutual_exclusivity, result_path, 
-                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, print_x=6):
+                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, print_x=6, state_priors=False):
 
     """[Runs the replicator mutator dynamics
     :param alpha: rate to control difference between semantic and pragmatic violations
@@ -97,11 +104,20 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     all_messages = messages
     all_states = states
+
     if predefined: 
         lexica, target_index, competitor_index, all_states, all_messages = get_predefined_lexica(predefined, target_lex, competitor_lex)
-
+        state_priors = np.array([conv_frac(sp) if type(sp) == str else sp for sp in state_priors  ])
 
     else: 
+        if not state_priors:
+            state_priors = np.ones(all_states[0]) / float(all_states[0])
+        else:
+            state_priors = np.array([conv_frac(sp) if type(sp) == str else sp for sp in state_priors  ])
+            if state_priors.shape[0] != all_states[0]:
+                raise Exception(f"State priors don't fit the amount of states ({all_states[0]})")
+
+
         if len(target_lex[0]) not in all_messages or len(target_lex) not in all_states:
             raise Exception("Target type does not fit the number of states and messages!")
         if len(competitor_lex[0]) not in all_messages or len(competitor_lex) not in all_states:
@@ -115,18 +131,17 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
                 target_index += target_in
                 competitor_index += competitor_in
 
-    #for l in lexica:
-    #    print(l)
+
     bins = get_lexica_bins(lexica, all_states) #To bin types with identical lexica
     target_bins = get_target_bins(target_index[0], bins, target_level, len(lexica))
     competitor_bins = get_target_bins(competitor_index[0], bins, competitor_level, len(lexica))
 
     l_prior = get_prior(lexica, cost, all_states)
-    typeList = [LiteralPlayer(lam,lex) for lex in lexica] + [GriceanPlayer(alpha,lam,lex) for lex in lexica]
+    typeList = [LiteralPlayer(lam,lex, state_priors) for lex in lexica] + [GriceanPlayer(alpha,lam,lex, state_priors) for lex in lexica]
     likelihoods = [t.sender_matrix for t in typeList]
 
     
-    u = get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, result_path, predefined)
+    u = get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, result_path, predefined, state_priors)
 
     q = get_mutation_matrix(all_states, all_messages,likelihoods,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined)
     # raise Exception    
@@ -188,17 +203,22 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     get_target_types(inc, bins, target_bins, competitor_bins, p_mean, result_path)
 
+    sum_winning_types = 0
+    for inc_bin_type in bins[inc_bin]:
+        sum_winning_types += p_mean[inc_bin_type]
+
     end_results = [
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n", 
     '*** Results with parameters: dynamics= %s, alpha = %d, lambda = %d, k = %d, samples per type = %d, learning parameter = %.2f, generations = %d, runs = %d ***\n' % (kind, alpha, lam, k, sample_amount, learning_parameter, gens, runs),
-    f"*** Lexica parameters: states={all_states}, messages={all_messages}, cost={cost}***\n",
+    f"*** Lexica parameters: states={all_states}, messages={all_messages}, cost={cost}, state priors = {state_priors}***\n",
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n",     
     f"# Incumbent type: {inc} with proportion {p_mean[inc]}\n",
     f"{get_lexica_representations(inc, lexica)}\n",
     f"# The bin of the incumbent {inc_bin}\n",
     f"# Bin: {bins[inc_bin]}\n",
+    f"# Summed proportion of the bin of the incumbent: {sum_winning_types}\n",
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n",    
-    f"# 6 best types: \n"]
+    f"# {print_x} best types: \n"]
     for typ in sorted_best_x:
         end_results.append(f"-Type {typ} with proportion {p_mean[typ]}\n")
         end_results.append(f"{(get_lexica_representations(typ, lexica))}\n")
