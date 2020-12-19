@@ -148,6 +148,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     if not os.path.isdir("experiments/" + result_path + "/results/"):
         os.makedirs("experiments/" + result_path + "/" +"results/")
+        
     f = csv.writer(open('experiments/%s/results/%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-g%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),lam,alpha,k,sample_amount,learning_parameter,gens,str(mutual_exclusivity)),'w'))
     f.writerow(['runID','kind']+['t_ini'+str(x) for x in range(len(typeList))] +\
                ['lam', 'alpha','k','samples','l','gens', 'm_excl'] + ['t_final'+str(x) for x in range(len(typeList))])
@@ -186,7 +187,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
             #late stopping
             gen_winner = np.argpartition(p, -print_x)[-print_x:] # ascending order
             sorted_gen_winner = np.flip(gen_winner[np.argsort(p[gen_winner])]) # descending order
-            sorted_gen_winner_tuples = [(winner, round(p[winner], 6)) for winner in sorted_gen_winner]
+            sorted_gen_winner_tuples = [(winner, round(p[winner], 10)) for winner in sorted_gen_winner]
             
             if np.array_equal(sorted_gen_winner_tuples, gen_winners[0]):
                 gen_winners[1] +=1

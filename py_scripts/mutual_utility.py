@@ -35,9 +35,9 @@ def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, 
     states = max(all_states)             
     messages = max(all_messages)
     state_priors = state_priors[..., None] 
-    if os.path.isfile('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(all_states),str(all_messages),lam,alpha,str(mutual_exclusivity))) and not predefined:
+    if os.path.isfile("experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv" %(result_path, str(states), str(messages),lam,alpha,str(mutual_exclusivity))) and not predefined:
         print('# Loading utilities,\t\t', datetime.datetime.now().replace(microsecond=0))
-        return np.genfromtxt('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(all_states),str(all_messages),lam,alpha,str(mutual_exclusivity)),delimiter=',')
+        return np.genfromtxt("experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv" %(result_path, str(states), str(messages),lam,alpha,str(mutual_exclusivity)),delimiter=',')
     else:
         print('# Computing utilities,\t\t', datetime.datetime.now().replace(microsecond=0))
         out = np.zeros([len(typeList), len(typeList)])

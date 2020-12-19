@@ -32,6 +32,6 @@ def pragmatic_vs_literal(probs, results, lexica, result_path, x):
     plt.xlabel("epochs")
 
     legend1 = plt.legend(plots1, x_best_literal, title="literal", fontsize='small', fancybox=True, loc=1)
-    plt.legend(plots2, x_best_pragmatic,title="pragmatic", fontsize='small', fancybox=True, loc=4)
+    plt.legend(plots2, x_best_pragmatic,title="pragmatic", fontsize='small', fancybox=True, loc=2)
     plt.gca().add_artist(legend1)
     plt.savefig(f'experiments/{result_path}/results/progress_best_{x}_lit_and_prag_types.png')
