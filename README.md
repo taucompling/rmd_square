@@ -27,10 +27,9 @@ python3 main.py path_to_yaml.yaml
 ```
 For example:
 ```bash
-python3 main.py configs/3x3_bb.yaml
+python3 main.py configs/example.yaml
 ```
-There are predefined yamls in the folder `configs`. They are of the form "messages x states_cost.yaml". For examlpe "3x3_bb.yaml" contains the configuration for an experiment with lexica of size 3x3 (3 states and 3 messages) and the building-block cost function. 
-Use one of the predefined yamls or copy one and adjust it for your needs.
+You can find the example file `example.yaml` in the `configs` folder. Use this one or copy it and adjust it for your needs.
 
 The results get stored in a folder `experiments`.
 
