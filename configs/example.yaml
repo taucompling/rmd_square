@@ -1,0 +1,31 @@
+# Basic configs
+General setting:
+  alpha: 1                                        # rate to control difference between semantic and pragmatic violations
+  lam: 20                                         # soft-max parameter
+  k: 5                                            # length of observation sequences
+  sample_amount: 50                               # amount of k-length samples for each production type
+  learning_parameter: 15                          # prob-matching = 1, increments approach MAP
+
+  gens: 50                                        # number of generations per simulation run
+  runs: 50                                        # number of independent simulation runs
+
+  states: [3]                                     # number of states
+  messages: [3]                                   # list with number of messages
+
+  state_priors: [0.25, 0.25, 0.5]                 # priors over states (optional, default: flat priors)
+
+  puzzle: False                                   # if True, only allows for the 4 corneres from the typological puzzle and pragmatic players
+
+
+  cost: "building_blocks"                         # brochhagen, building_blocks or equal
+  kind: "rmd"                                     # "rmd" (replicator-mutator-dynamics), "r" (only replicator), "m" (only mutator)
+  mutual_exclusivity: False                       # if True, no concept assigned to more than one message
+
+  target_lex: [[1, 0, 0], [0, 1, 0], [0,1,1]]     # lexicon of target type (to show in plot)
+  target_level: ["pragmatic"]                     # level (literal or pragmatic) of target type
+
+  competitor_lex: [[1, 1, 0], [0, 1, 0], [0,0,1]] # lexicon of competitor type (to show in plot)
+  competitor_level: ["pragmatic"]      # level (literal or pragmatic) of competitor type
+  
+  print_x: 6                                      # number of best types to show in the result plots 
+  result_path: "rmd_3x3_bb"                       # path to store results

@@ -23,7 +23,7 @@ def pad_lex(indices, lex, row_column):
         padded_lex.append(new_lex)
     return padded_lex
 
-def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutual_exclusivity=True):
+def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutual_exclusivity=True, puzzle=False):
     """creates lexica
 
     :param s_amount: number of columns in lexicon
@@ -43,6 +43,10 @@ def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutu
     columns = list(product([0., 1.], repeat=s_amount)) 
     columns.remove(tuple(np.zeros(s_amount)))  # remove message false of all states
     columns.remove(tuple(np.ones(s_amount)))  # remove message true of all states
+
+    if puzzle and s_amount == 3:
+        columns.remove((1, 0, 1))
+        columns.remove((0, 1, 0))
 
     if max_message != m_amount:
         indices_messages = get_indices(max_message, m_amount)
@@ -66,7 +70,7 @@ def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutu
     return out, target_index, competitor_index # target_index and competitor_index may be empty
 
 
-def get_lexica_bins(lexica_list, all_states):
+def get_lexica_bins(lexica_list, all_states, puzzle):
     """get the concept of lexica
 
     :param lexica_list: list with lexica: states = rows, messages = columns
@@ -75,9 +79,8 @@ def get_lexica_bins(lexica_list, all_states):
     :rtype: list
     """
 
-    concepts = []
-    for state in all_states:
-        concepts += list(product([0,1], repeat=state))
+    state = all_states[0]
+    concepts = list(product([0,1], repeat=state))
     lexica_concepts = [] # contains for each lexicon a list with concepts
     for lex in lexica_list:
         concept_indices = []
@@ -101,11 +104,14 @@ def get_lexica_bins(lexica_list, all_states):
             bins[bin_counter.index(sorted_lexica_concepts)].append(lex_idx)
 
     # up to here we get bins for a single linguistic behavior. Now we double that for Literal/Gricean split
-    gricean_bins = []
-    for b in bins:
-        g_bin = [x+len(lexica_list) for x in b] # pragmatic dicts have literal value + len(lexicon)
-        gricean_bins.append(g_bin)
-    bins = bins+gricean_bins
+
+    if not puzzle:
+        gricean_bins = []
+        for b in bins:
+            g_bin = [x+len(lexica_list) for x in b] # pragmatic dicts have literal value + len(lexicon)
+            gricean_bins.append(g_bin)
+        bins = bins+gricean_bins
+
     return bins
 
 def normalize_cost(cost_dict, all_states):
@@ -135,7 +141,7 @@ def normalize_cost(cost_dict, all_states):
     return cost_dict
 
 
-def get_prior(lexica_list, cost, all_states):
+def get_prior(lexica_list, cost, all_states, puzzle):
     """Calculates prior over lexicon
 
     :param lexica_list: list of lexica
@@ -143,12 +149,6 @@ def get_prior(lexica_list, cost, all_states):
     :return: list of priors for each lexicon
     :rtype: list
     """
-
-    concepts = []
-    for state in all_states:
-        concepts += list(product([0,1], repeat=state))
-        concepts.remove(tuple(np.zeros(state)))  # remove message false of all states
-        concepts.remove(tuple(np.ones(state)))  # remove message true of all states
 
     if cost == "brochhagen": # cost of each concept in 'concepts'
         cost_dict = {(0,0,1): 3, (0,1,0):8, (0,1,1):4, (1,0,0):4, (1,0,1):10, (1,1,0):5, # for three states
@@ -179,5 +179,6 @@ def get_prior(lexica_list, cost, all_states):
                 continue
             lex_val *= cost_dict[tuple(concept)]
         out.append(lex_val)
-    out = out + out  # double for two types of linguistic behavior
+    if not puzzle:
+        out = out + out  # double for two types of linguistic behavior
     return np.array(out) / np.sum(out)

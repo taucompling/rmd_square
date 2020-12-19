@@ -112,6 +112,9 @@ def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_par
             lhs = get_likelihood(type_obs,likelihoods) #P(parent data|t_i) for all types
             #print(lhs)
             
+            #print(len(lexica_prior))
+            #print(np.transpose(lhs).shape)
+            #raise Exception
             post = normalize(lexica_prior * np.transpose(lhs)) #P(t_j|parent data) for all types; P(t_j)*P(d|t_j)
             #print(post)
             

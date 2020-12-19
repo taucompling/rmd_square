@@ -24,23 +24,23 @@ def get_type_bin(type_idx, bins):
         if type_idx in bins[b]:
             return b
 
-def get_lexica_representations(type, lexica):
+def get_lexica_representations(type, lexica, puzzle):
     l = lexica[type-len(lexica)]
     for column in l.T:
         if -5 in column:
             l = np.delete(l, np.where(l == -5)[1][0], 1)
-    return f"{check_literal_or_pragmatic(type, lexica)}:\n{l}"
+    return f"{check_literal_or_pragmatic(type, lexica, puzzle)}:\n{l}"
 
-def check_literal_or_pragmatic(type, lexica):
-    if type > len(lexica)-1:
+def check_literal_or_pragmatic(type, lexica, puzzle):
+    if type > len(lexica)-1 or puzzle:
         return "pragmatic"
     else:
         return "literal"
 
-def get_target_bins(type_idx, bins, level, number_of_lexica):
+def get_target_bins(type_idx, bins, level, number_of_lexica, puzzle):
     target_bins = []
     for l in level:
-        if l == "literal":
+        if l == "literal" or puzzle:
             target_bins.append(get_type_bin(type_idx, bins))
         else:
             target_bins.append(get_type_bin(type_idx + number_of_lexica, bins))
@@ -54,7 +54,7 @@ def conv_frac(s):
     return float(sum(Fraction(x) for x in s.split()))
 
 def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mutual_exclusivity, result_path, 
-                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, print_x=6, state_priors=False):
+                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, print_x=6, state_priors=False, puzzle = False):
 
     """[Runs the replicator mutator dynamics
     :param alpha: rate to control difference between semantic and pragmatic violations
@@ -95,6 +95,10 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     :type messages: int
     :param print_x: number of best x types to print in the results
     :type: int
+    :state_priors: different priors over states
+    :type: list
+    :puzzle: only allow the 4 corneres from the typological puzzle and pragmatic players
+    :type: boolean (default false)
     """
  
     print('# Starting,\t\t\t', datetime.datetime.now().replace(microsecond=0))
@@ -125,18 +129,23 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
         lexica, target_index, competitor_index = [], [], []
         for message in all_messages:
             for state in all_states:
-                lexicon, target_in, competitor_in = get_lexica(state, message, max(all_messages), target_lex, competitor_lex, mutual_exclusivity)
+                lexicon, target_in, competitor_in = get_lexica(state, message, max(all_messages), target_lex, competitor_lex, mutual_exclusivity, puzzle)
                 lexica += lexicon
                 target_index += target_in
                 competitor_index += competitor_in
 
 
-    bins = get_lexica_bins(lexica, all_states) #To bin types with identical lexica
-    target_bins = get_target_bins(target_index[0], bins, target_level, len(lexica))
-    competitor_bins = get_target_bins(competitor_index[0], bins, competitor_level, len(lexica))
+    bins = get_lexica_bins(lexica, all_states, puzzle) #To bin types with identical lexica
+    target_bins = get_target_bins(target_index[0], bins, target_level, len(lexica), puzzle)
+    competitor_bins = get_target_bins(competitor_index[0], bins, competitor_level, len(lexica), puzzle)
 
-    l_prior = get_prior(lexica, cost, all_states)
-    typeList = [LiteralPlayer(lam,lex, state_priors) for lex in lexica] + [GriceanPlayer(alpha,lam,lex, state_priors) for lex in lexica]
+    l_prior = get_prior(lexica, cost, all_states, puzzle)
+
+    if puzzle:
+        typeList = [GriceanPlayer(alpha,lam,lex, state_priors) for lex in lexica]
+    else:
+        typeList = [LiteralPlayer(lam,lex, state_priors) for lex in lexica] + [GriceanPlayer(alpha,lam,lex, state_priors) for lex in lexica]
+    
     likelihoods = [t.sender_matrix for t in typeList]
 
     
@@ -148,8 +157,9 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     if not os.path.isdir("experiments/" + result_path + "/results/"):
         os.makedirs("experiments/" + result_path + "/" +"results/")
-        
-    f = csv.writer(open('experiments/%s/results/%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-g%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),lam,alpha,k,sample_amount,learning_parameter,gens,str(mutual_exclusivity)),'w'))
+   
+    f = csv.writer(open(f'experiments/{result_path}/results/{kind}-s{all_states[0]}-m{all_messages}-lam{lam}-a{alpha}-k{k}-samples{sample_amount}-l{learning_parameter}-g{gens}-me{mutual_exclusivity}-sp{state_priors}-puzzle{puzzle}.csv','w'))
+
     f.writerow(['runID','kind']+['t_ini'+str(x) for x in range(len(typeList))] +\
                ['lam', 'alpha','k','samples','l','gens', 'm_excl'] + ['t_final'+str(x) for x in range(len(typeList))])
     
@@ -223,7 +233,8 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     inc_bin = get_type_bin(inc,bins)
 
     plot_progress(progress, sorted_best_x, result_path)
-    pragmatic_vs_literal(progress, p_mean, lexica, result_path, print_x)
+    if not puzzle:
+        pragmatic_vs_literal(progress, p_mean, lexica, result_path, print_x)
     print_best_x_types_to_file(p_mean, lexica,result_path, print_x)
 
 
@@ -242,7 +253,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     f"*** Lexica parameters: states={all_states}, messages={all_messages}, cost={cost}, state priors = {state_priors}***\n",
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n",     
     f"# Incumbent type: {inc} with proportion {p_mean[inc]}\n",
-    f"{get_lexica_representations(inc, lexica)}\n",
+    f"{get_lexica_representations(inc, lexica, puzzle)}\n",
     f"# The bin of the incumbent {inc_bin}\n",
     f"# Bin: {bins[inc_bin]}\n",
     f"# Summed proportion of the bin of the incumbent: {sum_winning_types}\n",
@@ -250,7 +261,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     f"# {print_x} best types: \n"]
     for typ in sorted_best_x:
         end_results.append(f"-Type {typ} with proportion {p_mean[typ]}\n")
-        end_results.append(f"{(get_lexica_representations(typ, lexica))}\n")
+        end_results.append(f"{(get_lexica_representations(typ, lexica, puzzle))}\n")
     # print("# All bins:", bins)
     
     print("# Finished:\t\t\t", datetime.datetime.now().replace(microsecond=0))
