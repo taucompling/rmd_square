@@ -39,9 +39,10 @@ def get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, 
         print('# Loading utilities,\t\t', datetime.datetime.now().replace(microsecond=0))
         return np.genfromtxt('experiments/%s/matrices/umatrix-s%s-m%s-lam%d-a%d-me%s.csv' %(result_path, str(all_states),str(all_messages),lam,alpha,str(mutual_exclusivity)),delimiter=',')
     else:
-        print('# Computing utilities, ', datetime.datetime.now().replace(microsecond=0))
+        print('# Computing utilities,\t\t', datetime.datetime.now().replace(microsecond=0))
         out = np.zeros([len(typeList), len(typeList)])
         for i in tqdm(range(len(typeList))):
+            #print(f"# {round((i/len(typeList)) * 100)}% - " ,i, f"/{len(typeList)} utilities", '', end='\r')
             for j in range(i, len(typeList)): # symmetric matrix, just iterated over half of it
 
                 sender_i = typeList[i].sender_matrix

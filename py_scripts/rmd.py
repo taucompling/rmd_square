@@ -1,7 +1,6 @@
 ## Functions for replicator-mutator dynamics with iterated learning as mutator dynamics
 
 import numpy as np
-from tqdm import tqdm
 #np.set_printoptions(threshold=np.nan)
 from random import sample
 from itertools import product
@@ -165,10 +164,15 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     
     winners = []
     progress = []
+    gen_winners = [[None], 0]
+    avg_gens = []
+    
     for i in range(runs):
         p = np.random.dirichlet(np.ones(len(typeList))) # unbiased random starting state
         p_initial = p
-        for _ in range(gens):
+        r = 0
+        while True:
+
             if kind == 'rmd':
                 pPrime = p * [np.sum(u[t,] * p)  for t in range(len(typeList))] # type_prob * fitness
                 pPrime = pPrime / np.sum(pPrime) # / average fitness in population 
@@ -178,22 +182,43 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
             elif kind == 'r': # communicative success
                 pPrime = p * [np.sum(u[t,] * p)  for t in range(len(typeList))] # without mutation matrix
                 p = pPrime / np.sum(pPrime)
-    
+
+            #late stopping
+            gen_winner = np.argpartition(p, -print_x)[-print_x:] # ascending order
+            sorted_gen_winner = np.flip(gen_winner[np.argsort(p[gen_winner])]) # descending order
+            sorted_gen_winner_tuples = [(winner, round(p[winner], 6)) for winner in sorted_gen_winner]
+            
+            if np.array_equal(sorted_gen_winner_tuples, gen_winners[0]):
+                gen_winners[1] +=1
+            else:
+                gen_winners[0], gen_winners[1] = sorted_gen_winner_tuples, 1
+            
+            if r >= gens and gen_winners[1] >= 10:
+                avg_gens.append(r)
+                break
+            
+            r+=1 
+
+
         f.writerow([str(i),kind] + [str(p_initial[x]) for x in range(len(typeList))]+\
                    [str(lam),str(alpha),str(k),str(sample_amount),str(learning_parameter),str(gens),str(mutual_exclusivity)] +\
                    [str(p[x]) for x in range(len(typeList))])
         p_sum += p
         p_i_mean = p_sum/(i+1)
         winners.append(np.argmax(p_i_mean))
-        progress.append(p_i_mean)
-    p_mean = p_sum / runs
+        progress.append(p_i_mean)    
+
+    gens = np.average(avg_gens)
+    p_mean = p_sum / runs 
     f_mean.writerow([kind,str(lam),str(alpha),str(k),str(sample_amount),str(learning_parameter),str(gens),str(runs),str(mutual_exclusivity)] +\
                         [str(p_mean[x]) for x in range(len(typeList))])
     
     
     inc = np.argmax(p_mean)
-    best_x = np.argpartition(p_mean, -print_x)[-print_x:]
-    sorted_best_x = np.flip(best_x[np.argsort(p_mean[best_x])])
+    best_x = np.argpartition(p_mean, -print_x)[-print_x:] # ascending order
+
+    sorted_best_x = np.flip(best_x[np.argsort(p_mean[best_x])]) #descending order
+
     inc_bin = get_type_bin(inc,bins)
 
     plot_progress(progress, sorted_best_x, result_path)
@@ -204,12 +229,15 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     get_target_types(inc, bins, target_bins, competitor_bins, p_mean, result_path)
 
     sum_winning_types = 0
+
     for inc_bin_type in bins[inc_bin]:
+
         sum_winning_types += p_mean[inc_bin_type]
+
 
     end_results = [
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n", 
-    '*** Results with parameters: dynamics= %s, alpha = %d, lambda = %d, k = %d, samples per type = %d, learning parameter = %.2f, generations = %d, runs = %d ***\n' % (kind, alpha, lam, k, sample_amount, learning_parameter, gens, runs),
+    '*** Results with parameters: dynamics= %s, alpha = %d, lambda = %d, k = %d, samples per type = %d, learning parameter = %.2f, avg_generations = %d, runs = %d ***\n' % (kind, alpha, lam, k, sample_amount, learning_parameter, gens, runs),
     f"*** Lexica parameters: states={all_states}, messages={all_messages}, cost={cost}, state priors = {state_priors}***\n",
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n",     
     f"# Incumbent type: {inc} with proportion {p_mean[inc]}\n",
