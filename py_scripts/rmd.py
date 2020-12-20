@@ -208,6 +208,11 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
                 avg_gens.append(r)
                 break
             
+            if r == 10000:
+                avg_gens.append(r)
+                print("STOPPED after 10000 generations")
+                break
+
             r+=1 
 
 
