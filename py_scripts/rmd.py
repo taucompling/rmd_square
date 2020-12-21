@@ -147,11 +147,15 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
         typeList = [LiteralPlayer(lam,lex, state_priors) for lex in lexica] + [GriceanPlayer(alpha,lam,lex, state_priors) for lex in lexica]
     
     likelihoods = [t.sender_matrix for t in typeList]
-
     
     u = get_utils(typeList, all_messages, all_states, lam,alpha,mutual_exclusivity, result_path, predefined, state_priors)
+    #print("COM:",)
+    #for _ in u:
+    #    print(np.sum(u))
 
     q = get_mutation_matrix(all_states, all_messages,likelihoods,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined)
+    #print("MUT:\n", q)
+    
     # raise Exception    
     print('# Beginning multiple runs,\t', datetime.datetime.now().replace(microsecond=0))
 
@@ -184,6 +188,9 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
         r = 0
         while True:
 
+            #print("GENERATION: ", r+1)
+            #print(p)
+
             if kind == 'rmd':
                 pPrime = p * [np.sum(u[t,] * p)  for t in range(len(typeList))] # type_prob * fitness
                 pPrime = pPrime / np.sum(pPrime) # / average fitness in population 
@@ -195,6 +202,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
                 p = pPrime / np.sum(pPrime)
 
             #late stopping
+            #print(p)
             gen_winner = np.argpartition(p, -print_x)[-print_x:] # ascending order
             sorted_gen_winner = np.flip(gen_winner[np.argsort(p[gen_winner])]) # descending order
             sorted_gen_winner_tuples = [(winner, round(p[winner], 10)) for winner in sorted_gen_winner]
@@ -215,6 +223,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
             r+=1 
 
+        #raise Exception
 
         f.writerow([str(i),kind] + [str(p_initial[x]) for x in range(len(typeList))]+\
                    [str(lam),str(alpha),str(k),str(sample_amount),str(learning_parameter),str(gens),str(mutual_exclusivity)] +\
@@ -255,7 +264,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     end_results = [
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n", 
     '*** Results with parameters: dynamics= %s, alpha = %d, lambda = %d, k = %d, samples per type = %d, learning parameter = %.2f, avg_generations = %d, runs = %d ***\n' % (kind, alpha, lam, k, sample_amount, learning_parameter, gens, runs),
-    f"*** Lexica parameters: states={all_states}, messages={all_messages}, cost={cost}, state priors = {state_priors}***\n",
+    f"*** Lexica parameters: states={all_states}, messages={all_messages}, cost={cost}, state priors = {state_priors}, puzzle = {puzzle}***\n",
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n",     
     f"# Incumbent type: {inc} with proportion {p_mean[inc]}\n",
     f"{get_lexica_representations(inc, lexica, puzzle)}\n",

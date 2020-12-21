@@ -162,8 +162,8 @@ def get_prior(lexica_list, cost, all_states, puzzle):
             (0,1):1, (1,0):1}  # for two states
 
     elif cost == "sonstiges":
-        cost_dict = {(0,0,1): 20, (0,1,1): 20, (1,1,0): 1, (1,0,0): 1,  # 4 corners
-                    (1,0, 1): 40, (0,1,0): 40, # high
+        cost_dict = {(0,0,1): 16, (0,1,1): 4, (1,1,0): 8, (1,0,0): 16,  # 4 corners
+                    (1,0, 1): 20, (0,1,0): 20, # high
                     (0,1):1, (1,0):1}  # for two states
     else:
         raise Exception("Cost function is not defined. Please define it in lexica.py")
