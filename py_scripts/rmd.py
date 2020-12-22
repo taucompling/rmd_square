@@ -4,6 +4,8 @@ import numpy as np
 #np.set_printoptions(threshold=np.nan)
 from random import sample
 from itertools import product
+#from collections import defaultdict
+
 from py_scripts.player import LiteralPlayer,GriceanPlayer
 from py_scripts.lexica import get_lexica,get_prior,get_lexica_bins
 from py_scripts.process_predefined_lexica import  get_predefined_lexica
@@ -177,12 +179,13 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     p_sum = np.zeros(len(typeList)) #vector to store mean across runs
     
-    winners = []
-    progress = []
+
+
     gen_winners = [[None], 0]
     avg_gens = []
     
     for i in range(runs):
+        progress = []
         p = np.random.dirichlet(np.ones(len(typeList))) # unbiased random starting state
         p_initial = p
         r = 0
@@ -200,6 +203,12 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
             elif kind == 'r': # communicative success
                 pPrime = p * [np.sum(u[t,] * p)  for t in range(len(typeList))] # without mutation matrix
                 p = pPrime / np.sum(pPrime)
+
+            
+
+            progress.append(p)
+
+
 
             #late stopping
             #print(p)
@@ -223,15 +232,18 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
             r+=1 
 
+            
+
         #raise Exception
 
         f.writerow([str(i),kind] + [str(p_initial[x]) for x in range(len(typeList))]+\
                    [str(lam),str(alpha),str(k),str(sample_amount),str(learning_parameter),str(gens),str(mutual_exclusivity)] +\
                    [str(p[x]) for x in range(len(typeList))])
         p_sum += p
-        p_i_mean = p_sum/(i+1)
-        winners.append(np.argmax(p_i_mean))
-        progress.append(p_i_mean)    
+
+
+    
+
 
     gens = np.average(avg_gens)
     p_mean = p_sum / runs 
@@ -246,7 +258,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     inc_bin = get_type_bin(inc,bins)
 
-    plot_progress(progress, sorted_best_x, result_path)
+    plot_progress(progress, print_x, result_path)
     if not puzzle:
         pragmatic_vs_literal(progress, p_mean, lexica, result_path, print_x)
     print_best_x_types_to_file(p_mean, lexica,result_path, print_x)

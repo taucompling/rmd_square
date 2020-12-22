@@ -162,7 +162,7 @@ def get_prior(lexica_list, cost, all_states, puzzle):
             (0,1):1, (1,0):1}  # for two states
 
     elif cost == "sonstiges":
-        cost_dict = {(0,0,1): 7, (0,1,1): 7, (1,1,0):10, (1,0,0): 8,  # 4 corners
+        cost_dict = {(0,0,1): 8, (0,1,1): 8, (1,1,0):9, (1,0,0): 8,  # 4 corners
                     (1,0, 1): 20, (0,1,0): 20, # high
                     (0,1):1, (1,0):1}  # for two states
     else:

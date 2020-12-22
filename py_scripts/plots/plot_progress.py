@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
-def plot_progress(probs, best_x, result_path):
+def plot_progress(probs, print_x,result_path):
+
+    best_x = np.argpartition(probs[0], -print_x)[-print_x:]
 
     epochs_best_x = [[] for _ in range(len(best_x))]
     for run in probs:
