@@ -281,8 +281,8 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     bin_winner = max(bin_orders, key=lambda k: bin_orders[k][1])
     
-    print(bins[target_bins[0]])
-    print(bin_orders)
+    #print(bins[target_bins[0]])
+    #print(bin_orders)
 
     end_results = [
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n", 
