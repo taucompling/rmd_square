@@ -4,7 +4,7 @@ import numpy as np
 #np.set_printoptions(threshold=np.nan)
 from random import sample
 from itertools import product
-#from collections import defaultdict
+from collections import defaultdict
 
 from py_scripts.player import LiteralPlayer,GriceanPlayer
 from py_scripts.lexica import get_lexica,get_prior,get_lexica_bins
@@ -121,6 +121,8 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
             state_priors = np.array([conv_frac(sp) if type(sp) == str else sp for sp in state_priors  ])
             if state_priors.shape[0] != all_states[0]:
                 raise Exception(f"State priors don't fit the amount of states ({all_states[0]})")
+            if np.sum(state_priors) != 1:
+                raise Exception(f"State priors dont' sum up to 1.")
 
 
         if len(target_lex[0]) not in all_messages or len(target_lex) not in all_states:
@@ -183,6 +185,11 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     gen_winners = [[None], 0]
     avg_gens = []
+
+    
+
+    bin_orders = defaultdict(lambda: [0,0])
+
     
     for i in range(runs):
         progress = []
@@ -232,18 +239,18 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
             r+=1 
 
-            
-
-        #raise Exception
-
         f.writerow([str(i),kind] + [str(p_initial[x]) for x in range(len(typeList))]+\
                    [str(lam),str(alpha),str(k),str(sample_amount),str(learning_parameter),str(gens),str(mutual_exclusivity)] +\
                    [str(p[x]) for x in range(len(typeList))])
         p_sum += p
+        
+        # Track Winner Bin
+        bin_orders[tuple(bins[get_type_bin(np.argmax(p), bins)])][0] += max(p)
+        bin_orders[tuple(bins[get_type_bin(np.argmax(p), bins)])][1] += 1
+
 
 
     
-
 
     gens = np.average(avg_gens)
     p_mean = p_sum / runs 
@@ -272,17 +279,25 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
         sum_winning_types += p_mean[inc_bin_type]
 
+    bin_winner = max(bin_orders, key=lambda k: bin_orders[k][1])
+    
+    print(bins[target_bins[0]])
+    print(bin_orders)
 
     end_results = [
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n", 
     '*** Results with parameters: dynamics= %s, alpha = %d, lambda = %d, k = %d, samples per type = %d, learning parameter = %.2f, avg_generations = %d, runs = %d ***\n' % (kind, alpha, lam, k, sample_amount, learning_parameter, gens, runs),
     f"*** Lexica parameters: states={all_states}, messages={all_messages}, cost={cost}, state priors = {state_priors}, puzzle = {puzzle}***\n",
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n",     
-    f"# Incumbent type: {inc} with proportion {p_mean[inc]}\n",
-    f"{get_lexica_representations(inc, lexica, puzzle)}\n",
-    f"# The bin of the incumbent {inc_bin}\n",
-    f"# Bin: {bins[inc_bin]}\n",
-    f"# Summed proportion of the bin of the incumbent: {sum_winning_types}\n",
+    f"# WINNER BIN in {round(bin_orders[bin_winner][1]/runs * 100,2)} percent of the runs:\n",
+    f"# Average Proportion: {round(bin_orders[bin_winner][0]/bin_orders[bin_winner][1],4)}\n",
+    f"{get_lexica_representations(bin_winner[0], lexica, puzzle)}\n",    
+    "-------------------------------------------------------------------------------------------------------------------------------------------------\n",    
+    #f"# Incumbent type: {inc} with proportion {p_mean[inc]}\n",
+    #f"{get_lexica_representations(inc, lexica, puzzle)}\n",
+    #f"# The bin of the incumbent {inc_bin}\n",
+    #f"# Bin: {bins[inc_bin]}\n",
+    f"# Summed proportion of the bin of the incumbent: {round(sum_winning_types,4)}\n",
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n",    
     f"# {print_x} best types: \n"]
     for typ in sorted_best_x:

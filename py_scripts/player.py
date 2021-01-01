@@ -65,6 +65,7 @@ class LiteralPlayer:
             if sum(m[r]) == 0 or math.isnan(sum(m[r])): # added isnan
                 m[r] = self.state_priors
 
+
         return m
 
 
