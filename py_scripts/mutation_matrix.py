@@ -89,15 +89,15 @@ def get_likelihood(obs,likelihoods):
 
     return out
 
-def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined):
+def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined, state_priors):
     """Computes mutation matrix
 
     """
-    if os.path.isfile('experiments/%s/matrices/qmatrix-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
-                       %(result_path, str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity))) and not predefined:
+    if os.path.isfile('experiments/%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
+                       %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity))) and not predefined:
         print('# Loading mutation matrix,\t', datetime.datetime.now().replace(microsecond=0))
-        return np.genfromtxt('experiments/%s/matrices/qmatrix-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
-               %(result_path, s_amount,str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)), delimiter=',')
+        return np.genfromtxt('experiments/%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
+               %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)), delimiter=',')
     else:
         print('# Computing mutation matrix,\t', datetime.datetime.now().replace(microsecond=0))
         obs = get_obs(s_amount, m_amount, k,likelihoods,sample_amount) # get production data from all types
@@ -133,7 +133,7 @@ def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_par
             #print(out[parent_type])
             #raise Exception
         q = out
-        with open('experiments/%s/matrices/qmatrix-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' %(result_path, str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)),'w') as file:
+        with open('experiments/%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)),'w') as file:
             f_q = csv.writer(file)
             for i in q:
                 f_q.writerow(i)

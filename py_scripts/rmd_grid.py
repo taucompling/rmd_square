@@ -158,7 +158,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     #for _ in u:
     #    print(np.sum(u))
 
-    q = get_mutation_matrix(all_states, all_messages,likelihoods,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined)
+    q = get_mutation_matrix(all_states, all_messages,likelihoods,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined, state_priors)
     #print("MUT:\n", q)
     
     # raise Exception    
@@ -167,16 +167,16 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     if not os.path.isdir("experiments/" + result_path + "/results/"):
         os.makedirs("experiments/" + result_path + "/" +"results/")
    
-    f = csv.writer(open(f'experiments/{result_path}/results/{kind}-s{all_states[0]}-m{all_messages}-lam{lam}-a{alpha}-k{k}-samples{sample_amount}-l{learning_parameter}-g{gens}-me{mutual_exclusivity}-sp{state_priors}-puzzle{puzzle}.csv','w'))
+    f = csv.writer(open(f'experiments/{result_path}/results/{kind}-{state_priors}-s{all_states[0]}-m{all_messages}-lam{lam}-a{alpha}-k{k}-samples{sample_amount}-l{learning_parameter}-g{gens}-me{mutual_exclusivity}-sp{state_priors}-puzzle{puzzle}.csv','w'))
 
     f.writerow(['runID','kind']+['t_ini'+str(x) for x in range(len(typeList))] +\
                ['lam', 'alpha','k','samples','l','gens', 'm_excl'] + ['t_final'+str(x) for x in range(len(typeList))])
     
 
-    if os.path.isfile('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity))):
-        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'a'))
+    if os.path.isfile('experiments/%s/results/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,state_priors,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity))):
+        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors),str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity))))
     else: 
-        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'w'))
+        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(state_priors), str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'w'))
         f_mean.writerow(['kind','lam','alpha','k','samples','l','gens','runs','m_excl'] + ['t_mean'+str(x) for x in range(len(typeList))])
        
 
@@ -288,4 +288,3 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
             w.write(f"Proportion {round(prop/r, 2)}\n")
             w.write(f"________________________\n")
 
-    os.system("rm -rf experiments")

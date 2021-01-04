@@ -5,6 +5,7 @@ import numpy as np
 from random import sample
 from itertools import product
 from collections import defaultdict
+from tqdm import tqdm
 
 from py_scripts.player import LiteralPlayer,GriceanPlayer
 from py_scripts.lexica import get_lexica,get_prior,get_lexica_bins
@@ -56,7 +57,7 @@ def conv_frac(s):
     return float(sum(Fraction(x) for x in s.split()))
 
 def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mutual_exclusivity, result_path, 
-                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, print_x=6, state_priors=False, puzzle = False):
+                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, print_x=6, puzzle = False, state_priors=False):
 
     """[Runs the replicator mutator dynamics
     :param alpha: rate to control difference between semantic and pragmatic violations
@@ -157,7 +158,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     #for _ in u:
     #    print(np.sum(u))
 
-    q = get_mutation_matrix(all_states, all_messages,likelihoods,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined)
+    q = get_mutation_matrix(all_states, all_messages,likelihoods,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined, state_priors)
     #print("MUT:\n", q)
     
     # raise Exception    
@@ -166,16 +167,16 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     if not os.path.isdir("experiments/" + result_path + "/results/"):
         os.makedirs("experiments/" + result_path + "/" +"results/")
    
-    f = csv.writer(open(f'experiments/{result_path}/results/{kind}-s{all_states[0]}-m{all_messages}-lam{lam}-a{alpha}-k{k}-samples{sample_amount}-l{learning_parameter}-g{gens}-me{mutual_exclusivity}-sp{state_priors}-puzzle{puzzle}.csv','w'))
+    f = csv.writer(open(f'experiments/{result_path}/results/{kind}-{state_priors}-s{all_states[0]}-m{all_messages}-lam{lam}-a{alpha}-k{k}-samples{sample_amount}-l{learning_parameter}-g{gens}-me{mutual_exclusivity}-sp{state_priors}-puzzle{puzzle}.csv','w'))
 
     f.writerow(['runID','kind']+['t_ini'+str(x) for x in range(len(typeList))] +\
                ['lam', 'alpha','k','samples','l','gens', 'm_excl'] + ['t_final'+str(x) for x in range(len(typeList))])
     
 
-    if os.path.isfile('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity))):
-        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'a'))
+    if os.path.isfile('experiments/%s/results/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors),str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity))):
+        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors),str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity))))
     else: 
-        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind,str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'w'))
+        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors), str(all_states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'w'))
         f_mean.writerow(['kind','lam','alpha','k','samples','l','gens','runs','m_excl'] + ['t_mean'+str(x) for x in range(len(typeList))])
        
 
@@ -191,7 +192,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     bin_orders = defaultdict(lambda: [0,0])
 
     
-    for i in range(runs):
+    for i in tqdm(range(runs)):
         progress = []
         p = np.random.dirichlet(np.ones(len(typeList))) # unbiased random starting state
         p_initial = p
@@ -214,9 +215,6 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
             
 
             progress.append(p)
-
-
-
             #late stopping
             #print(p)
             gen_winner = np.argpartition(p, -print_x)[-print_x:] # ascending order
@@ -281,8 +279,8 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     bin_winner = max(bin_orders, key=lambda k: bin_orders[k][1])
     
-    #print(bins[target_bins[0]])
-    #print(bin_orders)
+    print(bins[target_bins[0]])
+    print(bin_orders)
 
     end_results = [
     "-------------------------------------------------------------------------------------------------------------------------------------------------\n", 
@@ -305,8 +303,11 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
         end_results.append(f"{(get_lexica_representations(typ, lexica, puzzle))}\n")
     # print("# All bins:", bins)
     
+
+
     print("# Finished:\t\t\t", datetime.datetime.now().replace(microsecond=0))
     for line in end_results:
         print(line)
     with open(f"experiments/{result_path}/results/end_results.txt", "w") as end:
         end.writelines(end_results)
+
