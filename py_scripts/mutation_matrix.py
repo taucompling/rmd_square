@@ -34,13 +34,13 @@ def summarize_counts(lst,states,messages):
         counter[s+m] += 1
     return counter
 
-def get_obs(all_states, all_messages, k,likelihoods,sample_amount):
+def get_obs(states, all_messages, k, typeList, sample_amount, negation_rate):
     """Returns summarized counts of k-length <s_i,m_j> production observations as [#(<s_0,m_0>), #(<s_0,m_1), #(<s_1,m_0>, #(s_1,m_1)], ...]] = k
     get production data from all types
 
     :type k: int
-    :param likelihoods: list containig likelihood-lists (sender matrices)
-    :type likelihoods: np.array
+    :param typeList: list containig all types 
+    :type sender_matrices: list 
     :param sample_amount: number of required sequences
     :type sample_amount: int
     :return: list containing lists with numbers of sampled sm-pairs ([0,4,0,2], [3,4,3,2]) first sample 0 s_0,m_0, 4 s_1, m_1
@@ -48,15 +48,16 @@ def get_obs(all_states, all_messages, k,likelihoods,sample_amount):
     """
         
     obs = [] #store all produced k-length (s,m) sequences 
+    sender_matrices = [t.sender_matrix for t in typeList]
 
-    for t in range(len(likelihoods)): # iterating over types
+    for t in range(len(sender_matrices)): # iterating over types
         produced_obs = [] #store k-length (s,m) sequences of a type
-        type_m_amount = likelihoods[t].shape[1] # get size of type for doubled_state_freq
-        type_s_amount = likelihoods[t].shape[0] 
+        type_m_amount = sender_matrices[t].shape[1] # get size of type for doubled_state_freq
+        type_s_amount = sender_matrices[t].shape[0] 
         s = list(range(type_s_amount))
         m = list(range(type_m_amount))
         atomic_observations = list(product(s,m)) # all possible state message pairs
-        production_vector = likelihoods[t].flatten()
+        production_vector = sender_matrices[t].flatten()
         state_freq = np.ones(type_s_amount) / float(type_s_amount) #frequency of states s_1,...,s_n 
         doubled_state_freq = np.column_stack(tuple(state_freq for _ in range(type_m_amount))).flatten() # P(s)
         sample_vector = production_vector * doubled_state_freq # P(m|s,t_i) * P(s)
@@ -64,32 +65,43 @@ def get_obs(all_states, all_messages, k,likelihoods,sample_amount):
         for _ in range(sample_amount):
             sampled_idx = [np.random.choice(range(len(atomic_observations)),p=sample_vector) for _ in range(k)] #sample state_message pair
             sampled_obs = [atomic_observations[x] for x in sampled_idx]
-            produced_obs.append(summarize_counts(sampled_obs, max(all_states), max(all_messages)))
+            
+            if not negation_rate:
+                produced_obs.append(summarize_counts(sampled_obs, states, max(all_messages)))
+            else:
+                negated_sender_matrix = np.flip(sender_matrices[t], 0).flatten()
+                negated_sample_vector = negated_sender_matrix * doubled_state_freq
+                negated_k = int(k*negation_rate)
+                negated_idx = [np.random.choice(range(len(atomic_observations)),p=negated_sample_vector) for _ in range(negated_k)] 
+                normal_idx = [np.random.choice(range(len(atomic_observations)),p=sample_vector) for _ in range(k - negated_k)]
+                mixed_obs = [atomic_observations[x] for x in normal_idx + negated_idx]
+                produced_obs.append(summarize_counts(mixed_obs, states, max(all_messages)))
         obs.append(produced_obs)
     return obs
 
-def get_likelihood(obs,likelihoods):
+def get_likelihood(obs,sender_matrices, negation_rate):
     """P(parent data|t_i) for all types and its samples
 
     :param obs: summarized counts of sampled ms-pairs for a type
     :type obs: np.array
-    :param likelihoods: list containig sender matrices
-    :type likelihoods: np.array
+    :param sender_matrices: list containig sender matrices
+    :type sender_matrices: np.array
     :return: matrix with likelihood for all types
     :rtype: np.array
     """
-    out = np.zeros([len(likelihoods), len(obs)]) # matrix to store results in
-    for lhi in range(len(likelihoods)):
-        flat_lhi = likelihoods[lhi].flatten()
+    out = np.zeros([len(sender_matrices), len(obs)]) # matrix to store results in
+    for lhi in range(len(sender_matrices)):
+        flat_sender = sender_matrices[lhi].flatten()
         #print(flat_lhi)
-        
-        for o in range(len(obs)):
-            #print([flat_lhi[x_i]**obs[o][x_i] for x_i in range(len(obs[o]))])
-            out[lhi,o] = np.prod([flat_lhi[x_i]**obs[o][x_i] for x_i in range(len(obs[o]))])
 
+        for o in range(len(obs)):
+
+            out[lhi,o] = np.prod([flat_sender[x_i]**obs[o][x_i] for x_i in range(len(obs[o]))])
+
+                
     return out
 
-def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined, state_priors):
+def get_mutation_matrix(s_amount,m_amount, typeList,lexica_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined, state_priors, negation_rate):
     """Computes mutation matrix
 
     """
@@ -100,18 +112,19 @@ def get_mutation_matrix(s_amount,m_amount, likelihoods,lexica_prior,learning_par
                %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)), delimiter=',')
     else:
         print('# Computing mutation matrix,\t', datetime.datetime.now().replace(microsecond=0))
-        obs = get_obs(s_amount, m_amount, k,likelihoods,sample_amount) # get production data from all types
-        out = np.zeros([len(likelihoods),len(likelihoods)]) #matrix to store Q # len(likelihoods) = type amount
+        sender_matrices = [t.sender_matrix for t in typeList]
+
+        obs = get_obs(s_amount, m_amount, k, typeList ,sample_amount, negation_rate) # get production data from all types
+        out = np.zeros([len(sender_matrices),len(sender_matrices)]) #matrix to store Q # len(sender_matrices) = type amount
         
-        for parent_type in tqdm(range(len(likelihoods))):
-           #  print(f"# {round((parent_type/len(likelihoods)) * 100)}% - " ,parent_type, f"/{len(likelihoods)} matrices", '', end='\r')
-            type_obs = obs[parent_type] #Parent production data
-            #print(type_obs)
-            
-            
-            lhs = get_likelihood(type_obs,likelihoods) #P(parent data|t_i) for all types
+        for parent_type in tqdm(range(len(sender_matrices))):
+           #  print(f"# {round((parent_type/len(sender_matrices)) * 100)}% - " ,parent_type, f"/{len(sender_matrices)} matrices", '', end='\r')
+            #print(typeList[parent_type].lexicon)
+            type_obs = obs[parent_type] #Parent production data            
+
+            lhs = get_likelihood(type_obs,sender_matrices, negation_rate) #P(parent data|t_i) for all types
             #print(lhs)
-            
+            #print("_______________________________________________")
             #print(len(lexica_prior))
             #print(np.transpose(lhs).shape)
             #raise Exception

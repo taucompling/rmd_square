@@ -26,7 +26,7 @@ def get_predefined_lexica(path, target_lex, competitor_lex):
         all_states.add(s)
 
     all_messages = list(all_messages)
-    all_states = list(all_states)
+    states = list(all_states)[0]
     max_message = max(all_messages)
 
     out = []
@@ -42,4 +42,4 @@ def get_predefined_lexica(path, target_lex, competitor_lex):
 
         out += lex
 
-    return out, target_index, competitor_index, all_states, all_messages
+    return out, target_index, competitor_index, states, all_messages

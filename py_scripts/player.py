@@ -1,6 +1,8 @@
 import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 import math
+# from message_costs import calculate_cost_dict
+from copy import deepcopy
 
 def normalize(m):
     """normalizes over rows
@@ -27,8 +29,8 @@ class LiteralPlayer:
         self.lam = lam
         self.lexicon = lexicon
         self.state_priors = state_priors
-        self.sender_matrix = self.sender_selection_matrix()
-        self.receiver_matrix =  self.receiver_selection_matrix()
+        self.sender_matrix = self.costly_sender_matrix = self.sender_selection_matrix() # costs don't make a difference for Literal Speaker
+        self.receiver_matrix = self.costly_receiver_matrix = self.receiver_selection_matrix()
         self.type = "LITERAL"
         
 
@@ -71,7 +73,7 @@ class LiteralPlayer:
 
 
 class GriceanPlayer:
-    def __init__(self,alpha, lam, lexicon, state_priors):
+    def __init__(self,alpha, lam, lexicon, state_priors, costs):
         """
         :param alpha: rate to control difference between semantic and pragmatic violations
         :type alpha: int
@@ -86,6 +88,8 @@ class GriceanPlayer:
         self.state_priors = state_priors
         self.sender_matrix = self.sender_selection_matrix()
         self.receiver_matrix = self.receiver_selection_matrix()
+        self.costly_sender_matrix = self.get_costly_sender_matrix(costs)
+        self.costly_receiver_matrix = self.get_costly_hearer_matrix(costs)
         self.type = "PRAGMATIC"
 
     def __repr__(self):
@@ -105,8 +109,13 @@ class GriceanPlayer:
             for column in range(sender_sel.shape[1]):
                 if l[row, column] == -5:
                     sender_sel[row, column] = 0 
-
         return normalize(sender_sel)
+
+    def get_costly_sender_matrix(self, costs):
+        sm = deepcopy(self.sender_matrix.transpose())
+        for c, column in enumerate(self.lexicon.transpose()):
+            sm[c] *= costs[tuple(column)]
+        return normalize(sm.transpose())
 
     def receiver_selection_matrix(self):
         """
@@ -131,5 +140,22 @@ class GriceanPlayer:
 
         return rec_sel
 
+    def get_costly_hearer_matrix(self, costs):
+        hm = deepcopy(self.costly_sender_matrix)
+        for i, row in enumerate(hm):
+            hm[i] = float(self.state_priors[i]) * row
+            
+        costly_hm = normalize(np.transpose(hm))
+        for row in range(costly_hm.shape[0]):
+            if sum(costly_hm[row]) == 0 or math.isnan(sum(costly_hm[row])):
+                costly_hm[row] = self.state_priors
+
+        #print(costly_hm)
+        return costly_hm
 
 
+
+#costs = calculate_cost_dict("brochhagen", 3, True)
+#lex = np.array([[1, 0, 0], [0, 1, 0], [0, 1, 1]])
+#x = GriceanPlayer(1, 1, lex, [1/3, 1/3, 1/3], costs)
+#print(x.sender_matrix)
