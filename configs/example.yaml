@@ -9,7 +9,7 @@ General setting:
   gens: 50                                        # number of generations per simulation run
   runs: 50                                        # number of independent simulation runs
 
-  states: 3                                     # number of states
+  states: 3                                       # number of states
   messages: [3]                                   # list with number of messages
 
   cost: "building_blocks"                         # brochhagen, building_blocks or equal
@@ -20,7 +20,7 @@ General setting:
   utility_message_cost: False                     # takes also costs for messages for the communicative success into account (optional: default False)
   negation_rate: 0.4                              # percentage of negated statements sampled in the mutator dynamics (optional: default False)
 
-  puzzle: False                                   # if True, only allows for the 4 corneres from the typological puzzle and pragmatic players
+  puzzle: False                                   # if True, only allows for the 4 corners from the typological puzzle and pragmatic players
 
   mutual_exclusivity: False                       # if True, no concept assigned to more than one message
 
