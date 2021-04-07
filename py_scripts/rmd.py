@@ -14,7 +14,6 @@ from py_scripts.mutation_matrix import summarize_counts, get_obs, get_mutation_m
 from py_scripts.mutual_utility import get_utils
 from py_scripts.message_costs import calculate_cost_dict
 from py_scripts.plots.plot_progress import plot_progress
-from py_scripts.plots.pragmatic_vs_literal import pragmatic_vs_literal
 from py_scripts.plots.x_best_prag_lit import print_best_x_types_to_file
 from py_scripts.plots.proportion_target_types import get_target_types
 import sys 
@@ -24,9 +23,11 @@ import os.path
 from fractions import Fraction
 
 def get_type_bin(type_idx, bins):
+
     for b in range(len(bins)):
         if type_idx in bins[b]:
             return b
+    raise Exception("Something did not work out with the bins!")
 
 def get_lexica_representations(type, lexica, puzzle):
     l = lexica[type-len(lexica)]
@@ -38,8 +39,7 @@ def get_lexica_representations(type, lexica, puzzle):
 def check_literal_or_pragmatic(type, lexica, puzzle):
     if type > len(lexica)-1 or puzzle:
         return "pragmatic"
-    else:
-        return "literal"
+    return "literal"
 
 def get_target_bins(type_idx, bins, level, number_of_lexica, puzzle):
     target_bins = []
@@ -136,13 +136,14 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
         lexica, target_index, competitor_index = [], [], []
         for message in all_messages:
             lexicon, target_in, competitor_in = get_lexica(states, message, max(all_messages), target_lex, competitor_lex, mutual_exclusivity, puzzle)
+            lex_len = len(lexica)
             lexica += lexicon
-            target_index += target_in
-            competitor_index += competitor_in
-
+            target_index += [lex_len + t for t in target_in]
+            competitor_index += [lex_len + t for t in competitor_in]
 
     bins = get_lexica_bins(lexica, states, puzzle) #To bin types with identical lexica
     target_bins = get_target_bins(target_index[0], bins, target_level, len(lexica), puzzle) if print_x > 0 else None
+
     competitor_bins = get_target_bins(competitor_index[0], bins, competitor_level, len(lexica), puzzle) if print_x > 0 else None
 
     message_costs = calculate_cost_dict(cost, states, puzzle)   
@@ -186,6 +187,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     
 
     bin_orders = defaultdict(lambda: [0,0])
+    all_progress = []
 
     
     for i in tqdm(range(runs)):
@@ -214,8 +216,12 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
             
 
             progress.append(p)
+
             #late stopping
-            #print(p)
+
+            #print(len(p))
+            #print(len(typeList))
+            #raise Exception
             gen_winner = np.argpartition(p, -print_x)[-print_x:] # ascending order
             sorted_gen_winner = np.flip(gen_winner[np.argsort(p[gen_winner])]) # descending order
             sorted_gen_winner_tuples = [(winner, round(p[winner], 10)) for winner in sorted_gen_winner]
@@ -234,7 +240,9 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
                 print("STOPPED after 20000 generations")
                 break
 
-            r+=1 
+            r+=1
+
+        all_progress.append(progress) 
 
         f.writerow([str(i),kind] + [str(p_initial[x]) for x in range(len(typeList))]+\
                    [str(lam),str(alpha),str(k),str(sample_amount),str(learning_parameter),str(gens),str(mutual_exclusivity)] +\
@@ -246,7 +254,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
         bin_orders[tuple(bins[get_type_bin(np.argmax(p), bins)])][1] += 1
 
 
-
+    
     
 
     gens = np.average(avg_gens)
@@ -262,13 +270,6 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
     inc_bin = get_type_bin(inc,bins)
 
-    if print_x > 0:
-        plot_progress(progress, print_x, result_path)        
-        if not puzzle:
-            pragmatic_vs_literal(progress, p_mean, lexica, result_path, print_x)        
-        print_best_x_types_to_file(p_mean, lexica,result_path, print_x)
-        get_target_types(inc, bins, target_bins, competitor_bins, p_mean, result_path)
-
     sum_winning_types = 0
 
     for inc_bin_type in bins[inc_bin]:
@@ -276,7 +277,18 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
         sum_winning_types += p_mean[inc_bin_type]
 
     bin_winner = max(bin_orders, key=lambda k: bin_orders[k][1])
-    
+
+    if print_x > 0:
+        plot_progress(progress, print_x, result_path, lexica, puzzle)        
+        if not puzzle:
+            pragmatic_vs_literal(progress, p_mean, lexica, result_path, print_x)        
+        print_best_x_types_to_file(p_mean, lexica,result_path, print_x)
+        average_best = round(bin_orders[bin_winner][0]/bin_orders[bin_winner][1],4)
+        get_target_types(average_best, bins, target_bins, competitor_bins, all_progress, result_path)
+
+    #print(target_bins)
+    #print(target_bins[0])
+    #print(get_lexica_representations(target_bins[0], lexica, puzzle))
     #print(bins[target_bins[0]])
     #print(bin_orders)
 
@@ -307,4 +319,4 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     with open(f"experiments/{result_path}/results/end_results.txt", "w") as end:
         end.writelines(end_results)
 
-    os.system("rm -rf experiments/")
+    #os.system("rm -rf experiments/")
