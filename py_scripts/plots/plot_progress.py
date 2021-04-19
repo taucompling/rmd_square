@@ -30,8 +30,7 @@ def plot_progress(probs, print_x,result_path, lexica, puzzle):
             else:
                 lex.append(words[tuple(column)])
         best_x_lexica.append(", ".join(lex))
-            
-    print(best_x_lexica)
+
     epochs_best_x = [[] for _ in range(len(best_x))]
 
     for run in probs:
@@ -41,10 +40,12 @@ def plot_progress(probs, print_x,result_path, lexica, puzzle):
 
     for type, probs in enumerate(epochs_best_x):
         plt.plot(probs, label=f"Type: {type}")
+    
     plt.ylabel("proportion")
+    #plt.yscale('log')
     plt.xlabel("generations")
     #plt.legend(best_x)
     plt.legend(best_x_lexica)
-    plt.savefig(f'experiments/{result_path}/results/progress_best_{len(best_x)}_types.png')
+    plt.savefig(f'experiments/{result_path}/results/progress_best_all_{len(best_x)}_types.png')
     
     

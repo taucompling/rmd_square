@@ -4,8 +4,8 @@ import numpy as np
 def get_target_types(best, bins,  target_bins, competitor_bins, all_progress, result_path):
     #f"# Average Proportion: {round(bin_orders[bin_winner][0]/bin_orders[bin_winner][1],4)}\n",
 
-    print("TARGET", target_bins)
-    print("COMPETITOR", competitor_bins)
+    #print("TARGET", target_bins)
+    #print("COMPETITOR", competitor_bins)
 
     plt.clf()
     target_types = bins[target_bins[0]]
