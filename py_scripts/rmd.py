@@ -14,6 +14,7 @@ from py_scripts.mutation_matrix import summarize_counts, get_obs, get_mutation_m
 from py_scripts.mutual_utility import get_utils
 from py_scripts.message_costs import calculate_cost_dict
 from py_scripts.plots.plot_progress import plot_progress
+from py_scripts.plots.plot_all_sizes import plot_all_sizes
 from py_scripts.plots.x_best_prag_lit import print_best_x_types_to_file
 from py_scripts.plots.proportion_target_types import get_target_types
 import sys 
@@ -279,7 +280,8 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     bin_winner = max(bin_orders, key=lambda k: bin_orders[k][1])
 
     if print_x > 0:
-        plot_progress(progress, print_x, result_path, lexica, puzzle)        
+        plot_all_sizes(progress, print_x, result_path, lexica, puzzle)
+        #plot_progress(progress, print_x, result_path, lexica, puzzle)          
         if not puzzle:
             pragmatic_vs_literal(progress, p_mean, lexica, result_path, print_x)        
         print_best_x_types_to_file(p_mean, lexica,result_path, print_x)

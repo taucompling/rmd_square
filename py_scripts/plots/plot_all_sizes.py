@@ -36,7 +36,8 @@ def plot_all_sizes(probs, print_x,result_path, lexica, puzzle):
         best_from_typ = sorted(info, key=lambda x: x[1])[-amount:]
         best_x.append(best_from_typ)
 
-    words = {(0, 1, 1): "some", (1, 0, 0): "none", (0, 0, 1): "all", (1, 1, 0): "not all"}
+    words = {(0, 1, 1): "some", (1, 0, 0): "none", (0, 0, 1): "all", (1, 1, 0): "not all", 
+              (1, 0, 0, 0): "and", (1, 1, 1, 0): "or", (0, 1, 1, 1): "nand",  (0, 0, 0, 1): "nor"}
 
 
     best_x_lexica = []

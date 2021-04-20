@@ -45,11 +45,20 @@ def calculate_cost_dict(cost, states, puzzle):
         cost_dict = {(0,0,1): 1, (0,1,0): 1, (0,1,1): 1, (1,0,0): 1, (1,0,1): 1, (1,1,0): 1, # for three states
             (0,1):1, (1,0):1}  # for two states
 
-    elif cost == "sonstiges":
+    elif cost == "new_approach":
 
-        cost_dict = {(0,0,1): 1, (0,1,1): 1, (1,1,0):8, (1,0,0): 1,  # 4 corners
-                    (1,0, 1): 20, (0,1,0): 20, # high
-                    (0,1):1, (1,0):1}  # for two states
+        cost_dict = {(0,0,1): 8, # all
+                    (0,1,1): 8, # some
+                    (1,1,0):10, # not all
+                    (1,0,0): 10,  # none
+                    (1,0, 1): 20, (0,1,0): 20, # none or all, some but not all
+                    
+                    (0,1):1, (1,0):1,  # for two states
+                    
+                    (1, 0, 0, 0): 8, # and
+                    (1, 1, 1, 0): 8, # or
+                    (0, 1, 1, 1): 10, # nand
+                    (0, 0, 0, 1):10} # nor
     else:
         raise Exception("Cost function is not defined. Please define it in lexica.py")
 

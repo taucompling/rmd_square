@@ -48,6 +48,10 @@ def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutu
         columns.remove((1, 0, 1))
         columns.remove((0, 1, 0))
 
+    if puzzle and s_amount == 4:
+        corners = [(1, 0, 0, 0), (1, 1, 1, 0), (0, 1, 1, 1), (0, 0, 0, 1)]
+        columns = [column for column in columns if column in corners]
+
     if max_message != m_amount:
         indices_messages = get_indices(max_message, m_amount)
     if mutual_exclusivity:  # no concept assigned to more than one message
@@ -58,10 +62,12 @@ def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutu
     for typ, mrx in enumerate(matrix):
         lex = np.array([mrx[i] for i in range(m_amount)]) 
         lex = [np.transpose(np.array([mrx[i] for i in range(m_amount)]))]
+
         if np.array_equal(lex[0], np.array(target_lex)):
-            target_index.append(len(out))
+            target_index.append(typ)
         if np.array_equal(lex[0], np.array(competitor_lex)):
-            competitor_index.append(len(out))
+            competitor_index.append(typ)
+
         if max_message != m_amount:
             lex = pad_lex(indices_messages, lex[0], "column")
                 
@@ -121,7 +127,7 @@ def get_prior(lexica_list, puzzle, cost_dict):
     :return: list of priors for each lexicon
     :rtype: list
     """
-  
+
     out = []
     for lex in lexica_list:
         current_lex = np.transpose(lex)
