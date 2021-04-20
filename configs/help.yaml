@@ -1,0 +1,42 @@
+General setting:
+  # basic config:
+  alpha: 1                                        # rate to control difference between semantic and pragmatic violations
+  lam: 20                                         # soft-max parameter
+  k: 15                                            # length of observation sequences
+  sample_amount: 50                               # amount of k-length samples for each production type
+  learning_parameter: 15                          # prob-matching = 1, increments approach MAP
+
+  gens: 50                                        # number of generations per simulation run
+  runs: 50                                        # number of independent simulation runs
+
+  states: 4                                     # number of states
+  messages: [2, 3, 4]                                   # list with number of messages
+
+  cost: "new_approach"                         # brochhagen, building_blocks or equal
+  kind: "rmd"                                     # "rmd" (replicator-mutator-dynamics), "r" (only replicator), "m" (only mutator)
+
+  # other features:
+  #state_priors: [0.5, 0.25, 0.25]                 # priors over states (optional, default: flat priors)
+  #utility_message_cost: True                     # takes also costs for messages for the communicative success into account (optional: default False)
+  #negation_rate: 0.4                              # percentage of negated statements sampled in the mutator dynamics (optional: default False)
+
+  puzzle: True                                   # if True, only allows for the 4 corneres from the typological puzzle and pragmatic players
+
+  mutual_exclusivity: False                       # if True, no concept assigned to more than one message
+
+  # plotting information:
+  print_x: 3                                      # number of best types to show in the result plots, if 0 no plots at all
+  #target_lex: [[1, 0, 0], [0, 1, 0], [0,1,1]]     # lexicon of target type (to show in plot)
+  target_lex: [[1, 1, 0], [0, 1, 0], [0,1,0], [0,0, 1]]     # lexicon of target type (to show in plot)
+  target_level: ["pragmatic"]                     # level (literal or pragmatic) of target type
+
+  #competitor_lex: [[1, 1, 0], [0, 1, 0], [0,0,1]] # lexicon of competitor type (to show in plot)
+  competitor_lex: [[1, 1, 0], [0, 1, 1], [0,1,1], [0,0, 1]]  # lexicon of competitor type (to show in plot)
+
+  competitor_level: ["pragmatic"]                 # level (literal or pragmatic) of competitor type
+  
+  # storing results
+  result_path: "example_folder"                   # path to store results
+
+
+
