@@ -2,7 +2,7 @@ General setting:
   # basic config:
   alpha: 1                                        # rate to control difference between semantic and pragmatic violations
   lam: 20                                         # soft-max parameter
-  k: 15                                            # length of observation sequences
+  k: 15                                           # length of observation sequences
   sample_amount: 50                               # amount of k-length samples for each production type
   learning_parameter: 15                          # prob-matching = 1, increments approach MAP
 
@@ -12,20 +12,20 @@ General setting:
   states: 3                                       # number of states
   messages: [3]                                   # list with number of messages
 
-  cost: "building_blocks"                         # brochhagen, building_blocks or equal
+  cost: "new_approach"                         # brochhagen, building_blocks, new_approach or equal
   kind: "rmd"                                     # "rmd" (replicator-mutator-dynamics), "r" (only replicator), "m" (only mutator)
 
   # other features:
-  state_priors: [0.25, 0.25, 0.5]                 # priors over states (optional, default: flat priors)
-  utility_message_cost: False                     # takes also costs for messages for the communicative success into account (optional: default False)
-  negation_rate: 0.4                              # percentage of negated statements sampled in the mutator dynamics (optional: default False)
+  # state_priors: [0.25, 0.25, 0.5]                 # priors over states (optional, default: flat priors)
+  # utility_message_cost: False                     # takes also costs for messages for the communicative success into account (optional: default False)
+  # negation_rate: 0.4                              # percentage of negated statements sampled in the mutator dynamics (optional: default False)
 
-  puzzle: False                                   # if True, only allows for the 4 corners from the typological puzzle and pragmatic players
+  puzzle: True                                   # if True, only allows for the 4 corners from the typological puzzle and pragmatic players
 
   mutual_exclusivity: False                       # if True, no concept assigned to more than one message
 
   # plotting information:
-  print_x: 6                                      # number of best types to show in the result plots, if 0 no plots at all
+  print_x: 3                                      # number of best types to show in the result plots, if 0 no plots at all
   target_lex: [[1, 0, 0], [0, 1, 0], [0,1,1]]     # lexicon of target type (to show in plot)
   target_level: ["pragmatic"]                     # level (literal or pragmatic) of target type
 
