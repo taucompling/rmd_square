@@ -34,3 +34,7 @@ General setting:
   
   # storing results
   result_path: "example_folder"                   # path to store results
+
+  # we don't come up with primitives, it can be raised to other categories
+  # 16 possibilities: there not something like every red/some green/every third ones of Johns
+  # more urgent: two corners

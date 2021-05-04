@@ -114,6 +114,8 @@ class GriceanPlayer:
     def get_costly_sender_matrix(self, costs):
         sm = deepcopy(self.sender_matrix.transpose())
         for c, column in enumerate(self.lexicon.transpose()):
+            if -5 in column:
+                continue
             sm[c] *= costs[tuple(column)]
         return normalize(sm.transpose())
 
