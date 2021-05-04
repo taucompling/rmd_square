@@ -12,7 +12,7 @@ General setting:
   states: 3                                       # number of states
   messages: [3]                                   # list with number of messages
 
-  cost: "new_approach"                         # brochhagen, building_blocks, new_approach or equal
+  cost: "new_approach"                         # brochhagen, building_blocks, uegaki, new_approach or equal
   kind: "rmd"                                     # "rmd" (replicator-mutator-dynamics), "r" (only replicator), "m" (only mutator)
 
   # other features:
@@ -20,7 +20,8 @@ General setting:
   # utility_message_cost: False                     # takes also costs for messages for the communicative success into account (optional: default False)
   # negation_rate: 0.4                              # percentage of negated statements sampled in the mutator dynamics (optional: default False)
 
-  puzzle: True                                   # if True, only allows for the 4 corners from the typological puzzle and pragmatic players
+  puzzle: True                                   # if True, only allows for the 4 corners from the typological puzzle
+  only_prag: True                                 # if True, allows only for pragmatic language types, False includes also literal types
 
   mutual_exclusivity: False                       # if True, no concept assigned to more than one message
 
