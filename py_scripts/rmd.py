@@ -60,7 +60,7 @@ def conv_frac(s):
 
 def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mutual_exclusivity, result_path, 
                 cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, 
-                print_x=6, puzzle = False, negation_rate=False, utility_message_cost=False, state_priors=False):
+                print_x=6, puzzle = False, negation_rate=False, utility_message_cost=False, state_priors=False, only_prag=True):
 
     """[Runs the replicator mutator dynamics
     :param alpha: rate to control difference between semantic and pragmatic violations
@@ -150,10 +150,10 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
     message_costs = calculate_cost_dict(cost, states, puzzle)   
     l_prior = get_prior(lexica, puzzle, message_costs) 
 
-    if puzzle:
+    if only_prag:
         typeList = [GriceanPlayer(alpha,lam,lex, state_priors, message_costs) for lex in lexica]
     else:
-        typeList = [LiteralPlayer(lam,lex, state_priors) for lex in lexica] + [GriceanPlayer(alpha,lam,lex, state_priors) for lex in lexica]
+        typeList = [LiteralPlayer(alpha,lam,lex, state_priors, message_costs) for lex in lexica] + [GriceanPlayer(alpha,lam,lex, state_priors, message_costs) for lex in lexica]
         
     u = get_utils(typeList, all_messages, states, lam,alpha,mutual_exclusivity, result_path, predefined, state_priors, utility_message_cost)
 
