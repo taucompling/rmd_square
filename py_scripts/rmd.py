@@ -286,7 +286,7 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
             pragmatic_vs_literal(progress, p_mean, lexica, result_path, print_x)        
         print_best_x_types_to_file(p_mean, lexica,result_path, print_x)
         average_best = round(bin_orders[bin_winner][0]/bin_orders[bin_winner][1],4)
-        get_target_types(average_best, bins, target_bins, competitor_bins, all_progress, result_path)
+        #get_target_types(average_best, bins, target_bins, competitor_bins, all_progress, result_path)
 
     #print(target_bins)
     #print(target_bins[0])
