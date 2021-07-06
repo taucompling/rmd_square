@@ -73,6 +73,6 @@ def plot_all_sizes(probs, print_x,result_path, lexica, puzzle):
     #plt.yscale('log')
     plt.xlabel("generations")
     plt.legend(best_x_lexica)
-    plt.savefig(f'experiments/{result_path}/results/progress_best_{len(best_x)}_types.png')
+    plt.savefig(f'{result_path}/results/progress_best_{len(best_x)}_types.png')
     
     

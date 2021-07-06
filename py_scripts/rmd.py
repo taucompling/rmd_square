@@ -1,210 +1,130 @@
-## Functions for replicator-mutator dynamics with iterated learning as mutator dynamics
-
+# import libraries
 import numpy as np
-#np.set_printoptions(threshold=np.nan)
-from random import sample
-from itertools import product
 from collections import defaultdict
 from tqdm import tqdm
+import datetime
+import csv
+import os.path
+import sys
 
+# import other scripts
 from py_scripts.player import LiteralPlayer,GriceanPlayer
 from py_scripts.lexica import get_lexica,get_prior,get_lexica_bins
-from py_scripts.process_predefined_lexica import  get_predefined_lexica
-from py_scripts.mutation_matrix import summarize_counts, get_obs, get_mutation_matrix, get_likelihood
-from py_scripts.mutual_utility import get_utils
+from py_scripts.mutation_matrix import get_mutation_matrix
+from py_scripts.mutual_utility import get_utils as brochhagen_utils
+from py_scripts.mutual_utility import get_utils as uegaki_utils
 from py_scripts.message_costs import calculate_cost_dict
+from py_scripts.utils import print_end_results, get_type_bin, get_lexica_representations, get_target_bins
+from py_scripts.checks import check_state_priors, check_print_x
+
+# import plotting scripts
+from py_scripts.plots.informativesness_score import get_informativeness
 from py_scripts.plots.plot_progress import plot_progress
 from py_scripts.plots.plot_all_sizes import plot_all_sizes
 from py_scripts.plots.x_best_prag_lit import print_best_x_types_to_file
 from py_scripts.plots.proportion_target_types import get_target_types
-import sys 
-import datetime
-import csv
-import os.path
-from fractions import Fraction
 
-def get_type_bin(type_idx, bins):
 
-    for b in range(len(bins)):
-        if type_idx in bins[b]:
-            return b
-    raise Exception("Something did not work out with the bins!")
+def run_dynamics(general_settings, states_and_messages, models, other_features, storing_results, plotting_info, grid_state_priors=False):
 
-def get_lexica_representations(type, lexica, puzzle):
-    l = lexica[type-len(lexica)]
-    for column in l.T:
-        if -5 in column:
-            l = np.delete(l, np.where(l == -5)[1][0], 1)
-    return f"{check_literal_or_pragmatic(type, lexica, puzzle)}:\n{l}"
+    """Runs the replicator mutator dynamics"""
 
-def check_literal_or_pragmatic(type, lexica, puzzle):
-    if type > len(lexica)-1 or puzzle:
-        return "pragmatic"
-    return "literal"
-
-def get_target_bins(type_idx, bins, level, number_of_lexica, puzzle):
-    target_bins = []
-    for l in level:
-        if l == "literal" or puzzle:
-            target_bins.append(get_type_bin(type_idx, bins))
-        else:
-            target_bins.append(get_type_bin(type_idx + number_of_lexica, bins))
-    return target_bins
-
-def conv_frac(s):
-    """
-    converts fraction string to float
-
-    """
-    return float(sum(Fraction(x) for x in s.split()))
-
-def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mutual_exclusivity, result_path, 
-                cost, target_lex, target_level, competitor_lex, competitor_level, predefined = False, states=0, messages=0, 
-                print_x=6, puzzle = False, negation_rate=False, utility_message_cost=False, state_priors=False, only_prag=True):
-
-    """[Runs the replicator mutator dynamics
-    :param alpha: rate to control difference between semantic and pragmatic violations
-    :type alpha: int
-    :param lam: softmax parameter
-    :type lam: int
-    :param k: sequence length
-    :type k: int
-    :param sample_amount: amount of samples (how many sequences)
-    :type sample_amount: int
-    :param gens: number of generations per simulation run
-    :type gens: int
-    :param runs: number of independent simulation runs
-    :type runs: int
-    :param learning_parameter: prob-matching = 1, increments approach MAP
-    :type learning_parameter: int
-    :param kind: model type (r (replicator), m (mutator), rmd)
-    :type kind: string
-    :param mutual_exclusivity: no concept assigned to more than one message
-    :type mutual_exclusivity: boolean
-    :param result_path: path to store results
-    :type string
-    :cost: type of cost function for the messages 
-    :type: string
-    :param target_lex: lexicon of target type
-    :type: list
-    :param target_level: level of target type (literal or pragmatic)
-    :type: list
-    :param competitor_lex: lexicon of competitor type
-    :type: list
-    :param competitor_level: level of competitor type (literal or pragmatic)
-    :type: list
-    :param predefined: Path to predefined lexica, else False
-    :type: string or boolean
-    :param states: amount of states
-    :type states: int
-    :param messages: amount of messages
-    :type messages: int
-    :param print_x: number of best x types to print in the results
-    :type: int
-    :state_priors: different priors over states
-    :type: list
-    :puzzle: only allow the 4 corneres from the typological puzzle and pragmatic players
-    :type: boolean (default false)
-    """
- 
     print('# Starting,\t\t\t', datetime.datetime.now().replace(microsecond=0))
-    if not os.path.isdir("experiments/" + result_path):
-        os.makedirs("experiments/" + result_path)
 
-    all_messages = messages
+    # setting parameters 
+    alpha, lam, k  = general_settings["alpha"], general_settings["lam"], general_settings["k"]
+    sample_amount, learning_parameter = general_settings["sample_amount"], general_settings["learning_parameter"]
+    gens, runs = general_settings["gens"], general_settings["runs"]
 
-    if predefined: 
-        lexica, target_index, competitor_index, states, all_messages = get_predefined_lexica(predefined, target_lex, competitor_lex)
-        state_priors = np.array([conv_frac(sp) if type(sp) == str else sp for sp in state_priors  ])
+    states, messages = states_and_messages["states"], states_and_messages["messages"]
+    kind, cost, mutual_utility_calculation = models["kind"], models["cost"], models["mutual_utility_calculation"]
 
-    else: 
-        if not state_priors:
-            state_priors = np.ones(states) / float(states)
-        else:
-            state_priors = np.array([conv_frac(sp) if type(sp) == str else sp for sp in state_priors  ])
-            if state_priors.shape[0] != states:
-                raise Exception(f"State priors don't fit the amount of states ({states})")
+    state_priors = check_state_priors(other_features["state_priors"], states, grid_state_priors)
+    utility_message_cost, negation_rate = other_features["utility_message_cost"], other_features["negation_rate"]
+    puzzle, only_prag, mutual_exclusivity = other_features["puzzle"], other_features["only_prag"], other_features["mutual_exclusivity"]
 
-            if round(np.sum(state_priors), 6) != 1:
-                raise Exception(f"State priors dont' sum up to 1.")
+    result_path = storing_results["result_path"]
+    target_lex, target_level =  plotting_info["target_lex"], plotting_info["target_level"]
+    competitor_lex, competitor_level = plotting_info["competitor_lex"], plotting_info["competitor_level"]   
+    print_x = check_print_x(plotting_info["print_x"],target_lex, competitor_lex, messages, states)
 
-        if print_x > 0:
-            if len(target_lex[0]) not in all_messages or len(target_lex) != states:
-                raise Exception("Target type does not fit the number of states and messages!")
-            if len(competitor_lex[0]) not in all_messages or len(competitor_lex)  != states:
-                raise Exception("Competitor type does not fit the number of states and messages!")
+    # creating the folders needed
+    if not os.path.isdir(result_path):
+        os.makedirs(result_path)
+    if not os.path.isdir(result_path + "/results/"):
+        os.makedirs(result_path + "/" + "results/")
+    if not os.path.isdir(result_path + "/res_data/"):
+        os.makedirs(result_path + "/" + "res_data/")
 
-        lexica, target_index, competitor_index = [], [], []
-        for message in all_messages:
-            lexicon, target_in, competitor_in = get_lexica(states, message, max(all_messages), target_lex, competitor_lex, mutual_exclusivity, puzzle)
-            lex_len = len(lexica)
-            lexica += lexicon
-            target_index += [lex_len + t for t in target_in]
-            competitor_index += [lex_len + t for t in competitor_in]
+    # get lexica
+    lexica, target_index, competitor_index = [], [], []
+    for message in messages:
+        lexicon, target_in, competitor_in = get_lexica(states, message, max(messages), target_lex, competitor_lex, mutual_exclusivity, puzzle)
+        lex_len = len(lexica)
+        lexica += lexicon
+        target_index += [lex_len + t for t in target_in]
+        competitor_index += [lex_len + t for t in competitor_in]
 
-    bins = get_lexica_bins(lexica, states, puzzle) #To bin types with identical lexica
+    # get  bins
+    bins = get_lexica_bins(lexica, states, puzzle) # bin types with identical lexica
     target_bins = get_target_bins(target_index[0], bins, target_level, len(lexica), puzzle) if print_x > 0 else None
-
     competitor_bins = get_target_bins(competitor_index[0], bins, competitor_level, len(lexica), puzzle) if print_x > 0 else None
 
+    # get costs and prios
     message_costs = calculate_cost_dict(cost, states, puzzle)   
     l_prior = get_prior(lexica, puzzle, message_costs) 
 
+    # get type_list
     if only_prag:
         typeList = [GriceanPlayer(alpha,lam,lex, state_priors, message_costs) for lex in lexica]
     else:
         typeList = [LiteralPlayer(alpha,lam,lex, state_priors, message_costs) for lex in lexica] + [GriceanPlayer(alpha,lam,lex, state_priors, message_costs) for lex in lexica]
         
-    u = get_utils(typeList, all_messages, states, lam,alpha,mutual_exclusivity, result_path, predefined, state_priors, utility_message_cost)
+    # calculation of mutual utility u    
+    if mutual_utility_calculation == "brochhagen":
+        u = brochhagen_utils(typeList, messages, states, lam,alpha,mutual_exclusivity, result_path,state_priors, utility_message_cost)
+    elif mutual_utility_calculation == "uegaki":
+        u = uegaki_utils(typeList, messages, states, lam,alpha,mutual_exclusivity, result_path, state_priors, utility_message_cost)
+    else:
+        raise NotImplementedError
 
+    # calculation of mutation matrix if needed
     if kind == "rmd" or kind == "m":
-        q = get_mutation_matrix(states, all_messages, typeList,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined, state_priors, negation_rate)
-    
-    print('# Beginning multiple runs,\t', datetime.datetime.now().replace(microsecond=0))
-
-    if not os.path.isdir("experiments/" + result_path + "/results/"):
-        os.makedirs("experiments/" + result_path + "/" +"results/")
+        q = get_mutation_matrix(states, messages, typeList,l_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, state_priors, negation_rate)
    
-    f = csv.writer(open(f'experiments/{result_path}/results/{kind}-{state_priors}-s{states}-m{all_messages}-lam{lam}-a{alpha}-k{k}-samples{sample_amount}-l{learning_parameter}-g{gens}-me{mutual_exclusivity}-sp{state_priors}-puzzle{puzzle}.csv','w'))
+    # preparing to store results
+    f = csv.writer(open(f'{result_path}/res_data/{kind}-{state_priors}-s{states}-m{messages}-lam{lam}-a{alpha}-k{k}-samples{sample_amount}-l{learning_parameter}-g{gens}-me{mutual_exclusivity}-sp{state_priors}-puzzle{puzzle}.csv','w'))
 
     f.writerow(['runID','kind']+['t_ini'+str(x) for x in range(len(typeList))] +\
                ['lam', 'alpha','k','samples','l','gens', 'm_excl'] + ['t_final'+str(x) for x in range(len(typeList))])
     
 
-    if os.path.isfile('experiments/%s/results/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors),str(states),str(all_messages),gens,runs,str(mutual_exclusivity))):
-        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors),str(states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'w'))
+    if os.path.isfile('%s/res_data/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors),str(states),str(messages),gens,runs,str(mutual_exclusivity))):
+        f_mean = csv.writer(open('%s/res_data/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors),str(states),str(messages),gens,runs,str(mutual_exclusivity)), 'w'))
     else: 
-        f_mean = csv.writer(open('experiments/%s/results/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors), str(states),str(all_messages),gens,runs,str(mutual_exclusivity)), 'w'))
+        f_mean = csv.writer(open('%s/res_data/00mean-%s-%s-s%s-m%s-g%d-r%d-me%s.csv' %(result_path, kind, str(state_priors), str(states),str(messages),gens,runs,str(mutual_exclusivity)), 'w'))
         f_mean.writerow(['kind','lam','alpha','k','samples','l','gens','runs','m_excl'] + ['t_mean'+str(x) for x in range(len(typeList))])
        
-
-    p_sum = np.zeros(len(typeList)) #vector to store mean across runs
     
+    # starts to calculate generations and runs    
+    print('# Beginning multiple runs,\t', datetime.datetime.now().replace(microsecond=0))
+    p_sum = np.zeros(len(typeList)) # vector to store mean across runs
 
-
-    gen_winners = [[None], 0]
+    gen_winners = [[None], 0] # to count winners in generations
     avg_gens = []
-
-    
-
     bin_orders = defaultdict(lambda: [0,0])
     all_progress = []
-
     
-    for i in tqdm(range(runs)):
+    for r in range(runs): # runs
         progress = []
         p = np.random.dirichlet(np.ones(len(typeList))) # unbiased random starting state
-        #p = np.random.uniform(np.ones(len(typeList)))
         p_initial = p
-        r = 0
-        while True:
-
-            #print("GENERATION: ", r+1)
-            #print(p)
-
+        gen = 0
+        while True: # generations (at least gens, max 20.000 )
             if kind == 'rmd':
-                pPrime = p * [np.sum(u[t,] * p)  for t in range(len(typeList))] # type_prob * fitness
-                pPrime = pPrime / np.sum(pPrime) # / average fitness in population 
+                fitness = [np.sum(u[t,] * p)  for t in range(len(typeList))] 
+                pPrime = p * fitness # type_prob * fitness
+                pPrime = pPrime / np.sum(pPrime) # average fitness in population 
                 p = np.dot(pPrime, q) # * Q-matrix
 
             elif kind == 'm': # learnability
@@ -212,17 +132,11 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
             elif kind == 'r': # communicative success
                 pPrime = p * [np.sum(u[t,] * p)  for t in range(len(typeList))] # without mutation matrix
-                p = pPrime / np.sum(pPrime)
 
-            
+                p = pPrime / np.sum(pPrime)
 
             progress.append(p)
 
-            #late stopping
-
-            #print(len(p))
-            #print(len(typeList))
-            #raise Exception
             gen_winner = np.argpartition(p, -print_x)[-print_x:] # ascending order
             sorted_gen_winner = np.flip(gen_winner[np.argsort(p[gen_winner])]) # descending order
             sorted_gen_winner_tuples = [(winner, round(p[winner], 10)) for winner in sorted_gen_winner]
@@ -232,20 +146,20 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
             else:
                 gen_winners[0], gen_winners[1] = sorted_gen_winner_tuples, 1
             
-            if r >= gens and gen_winners[1] >= 10:
-                avg_gens.append(r)
+            if gen >= gens and gen_winners[1] >= 10: # stops if 10 times the same winner with same proportion
+                avg_gens.append(gen)
                 break
             
-            if r == 20000:
-                avg_gens.append(r)
+            if gen == 20000:
+                avg_gens.append(gen)
                 print("STOPPED after 20000 generations")
                 break
 
-            r+=1
+            gen+=1
 
         all_progress.append(progress) 
 
-        f.writerow([str(i),kind] + [str(p_initial[x]) for x in range(len(typeList))]+\
+        f.writerow([str(r),kind] + [str(p_initial[x]) for x in range(len(typeList))]+\
                    [str(lam),str(alpha),str(k),str(sample_amount),str(learning_parameter),str(gens),str(mutual_exclusivity)] +\
                    [str(p[x]) for x in range(len(typeList))])
         p_sum += p
@@ -256,69 +170,64 @@ def run_dynamics(alpha,lam,k,sample_amount,gens,runs,learning_parameter,kind,mut
 
 
     
-    
+    # Evaluation 
 
     gens = np.average(avg_gens)
     p_mean = p_sum / runs 
     f_mean.writerow([kind,str(lam),str(alpha),str(k),str(sample_amount),str(learning_parameter),str(gens),str(runs),str(mutual_exclusivity)] +\
                         [str(p_mean[x]) for x in range(len(typeList))])
     
-    
+
+    # getting best types
     inc = np.argmax(p_mean)
-    best_x = np.argpartition(p_mean, -print_x)[-print_x:] if print_x > 0 else np.argpartition(p_mean, -10)[-10:] # ascending order
-
-    sorted_best_x = np.flip(best_x[np.argsort(p_mean[best_x])]) #descending order
-
     inc_bin = get_type_bin(inc,bins)
-
     sum_winning_types = 0
-
     for inc_bin_type in bins[inc_bin]:
-
         sum_winning_types += p_mean[inc_bin_type]
-
     bin_winner = max(bin_orders, key=lambda k: bin_orders[k][1])
+
+    if grid_state_priors:
+        if not os.path.isdir("grid_state_priors_results"):
+            os.makedirs("grid_state_priors_results")
+        if tuple(bins[target_bins[0]]) in bin_orders:
+            with open("grid_state_priors_results/grid_results.txt", "a+") as w:
+                prop = bin_orders[tuple(bins[target_bins[0]])][0]
+                r = bin_orders[tuple(bins[target_bins[0]])][1]
+                w.write(f"STATE PRIORS {state_priors}\n")
+                w.write(f"Is max? {tuple(bins[target_bins[0]]) == bin_winner}\n")
+                w.write(f"Percentage runs {round(r/runs, 2)}\n")
+                w.write(f"Proportion {round(prop/r, 2)}\n")
+                w.write(f"________________________\n")
+
+
+        os.system("rm -rf experiments")
+        return
+
+    # plotting things
+    get_informativeness(pPrime, typeList, bins, result_path)
 
     if print_x > 0:
         plot_all_sizes(progress, print_x, result_path, lexica, puzzle)
-        #plot_progress(progress, print_x, result_path, lexica, puzzle)          
-        if not puzzle:
-            pragmatic_vs_literal(progress, p_mean, lexica, result_path, print_x)        
-        print_best_x_types_to_file(p_mean, lexica,result_path, print_x)
+        # plot_progress(progress, print_x, result_path, lexica, puzzle)                 
+        print_best_x_types_to_file(p_mean, lexica,result_path, print_x, puzzle)
         average_best = round(bin_orders[bin_winner][0]/bin_orders[bin_winner][1],4)
-        #get_target_types(average_best, bins, target_bins, competitor_bins, all_progress, result_path)
+        # get_target_types(average_best, bins, target_bins, competitor_bins, all_progress, result_path)
 
-    #print(target_bins)
-    #print(target_bins[0])
-    #print(get_lexica_representations(target_bins[0], lexica, puzzle))
-    #print(bins[target_bins[0]])
-    #print(bin_orders)
 
-    end_results = [
-    "-------------------------------------------------------------------------------------------------------------------------------------------------\n", 
-    '*** Results with parameters: dynamics= %s, alpha = %d, lambda = %d, k = %d, samples per type = %d, learning parameter = %.2f, avg_generations = %d, runs = %d ***\n' % (kind, alpha, lam, k, sample_amount, learning_parameter, gens, runs),
-    f"*** Lexica parameters: states={states}, messages={all_messages}, cost={cost}, state priors = {state_priors}, puzzle = {puzzle}***\n",
-    "-------------------------------------------------------------------------------------------------------------------------------------------------\n",     
-    f"# WINNER BIN in {round(bin_orders[bin_winner][1]/runs * 100,2)} percent of the runs:\n",
-    f"# Average Proportion: {round(bin_orders[bin_winner][0]/bin_orders[bin_winner][1],4)}\n",
-    f"{get_lexica_representations(bin_winner[0], lexica, puzzle)}\n",    
-    "-------------------------------------------------------------------------------------------------------------------------------------------------\n",    
-    #f"# Incumbent type: {inc} with proportion {p_mean[inc]}\n",
-    #f"{get_lexica_representations(inc, lexica, puzzle)}\n",
-    #f"# The bin of the incumbent {inc_bin}\n",
-    #f"# Bin: {bins[inc_bin]}\n",
-    f"# Summed proportion of the bin of the incumbent: {round(sum_winning_types,4)}\n",
-    "-------------------------------------------------------------------------------------------------------------------------------------------------\n",    
-    f"# {print_x if print_x > 0 else 10} best types: \n"]
+    best_x = np.argpartition(p_mean, -print_x)[-print_x:] if print_x > 0 else np.argpartition(p_mean, -10)[-10:] # ascending order
+    sorted_best_x = np.flip(best_x[np.argsort(p_mean[best_x])]) #descending order
+
+
+    end_results = print_end_results(bin_orders, bin_winner, runs, lexica, puzzle, sum_winning_types, print_x)
+
     for typ in sorted_best_x:
         end_results.append(f"-Type {typ} with proportion {p_mean[typ]}\n")
         end_results.append(f"{(get_lexica_representations(typ, lexica, puzzle))}\n")
-    # print("# All bins:", bins)
     
     print("# Finished:\t\t\t", datetime.datetime.now().replace(microsecond=0))
     for line in end_results:
         print(line)
-    with open(f"experiments/{result_path}/results/end_results.txt", "w") as end:
+    with open(f"{result_path}/results/end_results.txt", "w") as end:
         end.writelines(end_results)
 
-    #os.system("rm -rf experiments/")
+    #os.system("rm -rf result_path")

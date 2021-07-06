@@ -41,8 +41,10 @@ def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutu
     """
     target_index, competitor_index = [], []
     columns = list(product([0., 1.], repeat=s_amount)) 
-    columns.remove(tuple(np.zeros(s_amount)))  # remove message false of all states
-    columns.remove(tuple(np.ones(s_amount)))  # remove message true of all states
+
+    if puzzle:
+        columns.remove(tuple(np.zeros(s_amount)))  # remove message false of all states
+        columns.remove(tuple(np.ones(s_amount)))  # remove message true of all states
 
     if puzzle and s_amount == 3:
         columns.remove((1, 0, 1))
@@ -54,10 +56,12 @@ def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutu
 
     if max_message != m_amount:
         indices_messages = get_indices(max_message, m_amount)
+
     if mutual_exclusivity:  # no concept assigned to more than one message
         matrix = list(combinations(columns, r=m_amount)) #combinations = not repeated element
     else: # If we allow for symmetric lexica (=repeated elements)
         matrix = list(product(columns, repeat=m_amount))
+
     out = []
     for typ, mrx in enumerate(matrix):
         lex = np.array([mrx[i] for i in range(m_amount)]) 

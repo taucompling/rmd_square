@@ -101,14 +101,14 @@ def get_likelihood(obs,sender_matrices, negation_rate):
                 
     return out
 
-def get_mutation_matrix(s_amount,m_amount, typeList,lexica_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, predefined, state_priors, negation_rate):
+def get_mutation_matrix(s_amount,m_amount, typeList,lexica_prior,learning_parameter,sample_amount,k,lam,alpha,mutual_exclusivity, result_path, state_priors, negation_rate):
     """Computes mutation matrix
 
     """
-    if os.path.isfile('experiments/%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
-                       %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity))) and not predefined:
+    if os.path.isfile('%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
+                       %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity))):
         print('# Loading mutation matrix,\t', datetime.datetime.now().replace(microsecond=0))
-        return np.genfromtxt('experiments/%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
+        return np.genfromtxt('%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
                %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)), delimiter=',')
     else:
         print('# Computing mutation matrix,\t', datetime.datetime.now().replace(microsecond=0))
@@ -117,36 +117,23 @@ def get_mutation_matrix(s_amount,m_amount, typeList,lexica_prior,learning_parame
         obs = get_obs(s_amount, m_amount, k, typeList ,sample_amount, negation_rate) # get production data from all types
         out = np.zeros([len(sender_matrices),len(sender_matrices)]) #matrix to store Q # len(sender_matrices) = type amount
         
-        for parent_type in tqdm(range(len(sender_matrices))):
-           #  print(f"# {round((parent_type/len(sender_matrices)) * 100)}% - " ,parent_type, f"/{len(sender_matrices)} matrices", '', end='\r')
-            #print(typeList[parent_type].lexicon)
+        for parent_type in range(len(sender_matrices)):
+
             type_obs = obs[parent_type] #Parent production data            
 
             lhs = get_likelihood(type_obs,sender_matrices, negation_rate) #P(parent data|t_i) for all types
-            #print(lhs)
-            #print("_______________________________________________")
-            #print(len(lexica_prior))
-            #print(np.transpose(lhs).shape)
-            #raise Exception
             post = normalize(lexica_prior * np.transpose(lhs)) #P(t_j|parent data) for all types; P(t_j)*P(d|t_j)
-            #print(post)
             
             
             parametrized_post = normalize(post**learning_parameter)
-            # print(parametrized_post)
-            
-            
-            normed_lhs = lhs[parent_type] / np.sum(lhs[parent_type]) # norm P(parent_data|parent_type)
-            # print(normed_lhs)
 
             
-            #print(parametrized_post)
-            #print(np.transpose(normed_lhs))
+            normed_lhs = lhs[parent_type] / np.sum(lhs[parent_type]) # norm P(parent_data|parent_type)
+
             out[parent_type] = np.dot(np.transpose(normed_lhs),parametrized_post)
-            #print(out[parent_type])
-            #raise Exception
+
         q = out
-        with open('experiments/%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)),'w') as file:
+        with open('%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)),'w') as file:
             f_q = csv.writer(file)
             for i in q:
                 f_q.writerow(i)

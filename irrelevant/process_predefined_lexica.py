@@ -1,5 +1,4 @@
 import numpy as np
-from itertools import product, combinations, combinations_with_replacement, permutations
 from py_scripts.lexica import get_indices, pad_lex
 
 def get_predefined_lexica(path, target_lex, competitor_lex):

@@ -46,6 +46,6 @@ def plot_progress(probs, print_x,result_path, lexica, puzzle):
     plt.xlabel("generations")
     #plt.legend(best_x)
     plt.legend(best_x_lexica)
-    plt.savefig(f'experiments/{result_path}/results/progress_best_all_{len(best_x)}_types.png')
+    plt.savefig(f'{result_path}/results/progress_best_all_{len(best_x)}_types.png')
     
     

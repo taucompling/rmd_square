@@ -18,7 +18,7 @@ def normalize_cost(cost_dict, states):
             k_length_cost[len(key)] = [value]
 
     if states not in k_length_cost:
-        raise Exception(f"No cost function defined for {state} states. Add it in lexica.py in get_prior().")
+        raise Exception(f"No cost function defined for {states} states. Add it in message_cost.py.")
     
     for key, value in cost_dict.items():
         cost_dict[key] = (max(k_length_cost[len(key)]) - value + 1)/np.sum(k_length_cost[len(key)])
@@ -80,10 +80,10 @@ def calculate_cost_dict(cost, states, puzzle):
                     (0, 1, 1, 1): 10, # nand
                     (0, 0, 0, 1):10} # nor
     else:
-        raise Exception("Cost function is not defined. Please define it in lexica.py")
+        raise Exception("Cost function is not defined. Please define it in message_cost.py")
 
 
-    if puzzle:
+    if puzzle and cost != "uegaki":
         del cost_dict[(1, 0, 1)]
         del cost_dict[(0, 1, 0)]
 
