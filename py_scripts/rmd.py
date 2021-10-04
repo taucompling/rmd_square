@@ -5,7 +5,7 @@ from tqdm import tqdm
 import datetime
 import csv
 import os.path
-import sys
+
 
 # import other scripts
 from py_scripts.player import LiteralPlayer,GriceanPlayer
@@ -15,7 +15,7 @@ from py_scripts.mutual_utility import get_utils as brochhagen_utils
 from py_scripts.mutual_utility import get_utils as uegaki_utils
 from py_scripts.message_costs import calculate_cost_dict
 from py_scripts.utils import print_end_results, get_type_bin, get_lexica_representations, get_target_bins
-from py_scripts.checks import check_state_priors, check_print_x
+from py_scripts.checks import check_state_priors, check_print_x, check_only_prag
 
 # import plotting scripts
 from py_scripts.plots.informativesness_score import get_informativeness
@@ -43,6 +43,10 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
     utility_message_cost, negation_rate = other_features["utility_message_cost"], other_features["negation_rate"]
     puzzle, only_prag, mutual_exclusivity = other_features["puzzle"], other_features["only_prag"], other_features["mutual_exclusivity"]
 
+    check_only_prag(only_prag, puzzle)
+    if puzzle:
+        only_prag = True
+
     result_path = storing_results["result_path"]
     target_lex, target_level =  plotting_info["target_lex"], plotting_info["target_level"]
     competitor_lex, competitor_level = plotting_info["competitor_lex"], plotting_info["competitor_level"]   
@@ -67,19 +71,22 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
 
     # get  bins
     bins = get_lexica_bins(lexica, states, puzzle) # bin types with identical lexica
+
     target_bins = get_target_bins(target_index[0], bins, target_level, len(lexica), puzzle) if print_x > 0 else None
     competitor_bins = get_target_bins(competitor_index[0], bins, competitor_level, len(lexica), puzzle) if print_x > 0 else None
 
     # get costs and prios
     message_costs = calculate_cost_dict(cost, states, puzzle)   
-    l_prior = get_prior(lexica, puzzle, message_costs) 
+    l_prior = get_prior(lexica, puzzle, message_costs, only_prag) 
 
     # get type_list
     if only_prag:
         typeList = [GriceanPlayer(alpha,lam,lex, state_priors, message_costs) for lex in lexica]
     else:
         typeList = [LiteralPlayer(alpha,lam,lex, state_priors, message_costs) for lex in lexica] + [GriceanPlayer(alpha,lam,lex, state_priors, message_costs) for lex in lexica]
-        
+
+
+
     # calculation of mutual utility u    
     if mutual_utility_calculation == "brochhagen":
         u = brochhagen_utils(typeList, messages, states, lam,alpha,mutual_exclusivity, result_path,state_priors, utility_message_cost)
@@ -209,7 +216,7 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
     if print_x > 0:
         plot_all_sizes(progress, print_x, result_path, lexica, puzzle)
         # plot_progress(progress, print_x, result_path, lexica, puzzle)                 
-        print_best_x_types_to_file(p_mean, lexica,result_path, print_x, puzzle)
+        #print_best_x_types_to_file(p_mean, lexica,result_path, print_x, puzzle)
         average_best = round(bin_orders[bin_winner][0]/bin_orders[bin_winner][1],4)
         # get_target_types(average_best, bins, target_bins, competitor_bins, all_progress, result_path)
 
@@ -230,4 +237,4 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
     with open(f"{result_path}/results/end_results.txt", "w") as end:
         end.writelines(end_results)
 
-    #os.system("rm -rf result_path")
+    os.system("rm -rf result_path")

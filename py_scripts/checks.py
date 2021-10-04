@@ -22,3 +22,8 @@ def check_print_x(print_x,target_lex, competitor_lex, messages, states):
             raise Exception("Competitor type does not fit the number of states and messages!")
         return print_x
     return print_x
+
+def check_only_prag(only_prag, puzzle):
+    if puzzle and not only_prag:
+        print("Warning: only_prag has been set True because puzzle is activated!")
+    return

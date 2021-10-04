@@ -62,7 +62,7 @@ def plot_all_sizes(probs, print_x,result_path, lexica, puzzle):
             if t in best_x:
                 epochs_best_x[list(best_x).index(t)].append(prob)
 
-    lines = ["k-","k--","k-.","k:"]
+    lines = ["k-","k--","k:","k-."]
     linecycler = cycle(lines)
 
 

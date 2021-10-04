@@ -36,7 +36,6 @@ def find_best_x_prag_lit(results, lexica, x, puzzle):
         elif check_literal_or_pragmatic(type, lexica, puzzle) == "literal" and len(x_best_literal) <= x:
             x_best_literal.append(type)
         elif check_literal_or_pragmatic(type, lexica, puzzle) == "pragmatic" and len(x_best_pragmatic) <= x:
-            print("hier")
             x_best_pragmatic.append(type)
 
     raise Exception("Something went wrong!")

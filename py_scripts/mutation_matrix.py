@@ -61,6 +61,7 @@ def get_obs(states, all_messages, k, typeList, sample_amount, negation_rate):
         state_freq = np.ones(type_s_amount) / float(type_s_amount) #frequency of states s_1,...,s_n 
         doubled_state_freq = np.column_stack(tuple(state_freq for _ in range(type_m_amount))).flatten() # P(s)
         sample_vector = production_vector * doubled_state_freq # P(m|s,t_i) * P(s)
+        # print(sample_vector)
 
         for _ in range(sample_amount):
             sampled_idx = [np.random.choice(range(len(atomic_observations)),p=sample_vector) for _ in range(k)] #sample state_message pair
@@ -105,6 +106,7 @@ def get_mutation_matrix(s_amount,m_amount, typeList,lexica_prior,learning_parame
     """Computes mutation matrix
 
     """
+
     if os.path.isfile('%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
                        %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity))):
         print('# Loading mutation matrix,\t', datetime.datetime.now().replace(microsecond=0))
@@ -122,7 +124,12 @@ def get_mutation_matrix(s_amount,m_amount, typeList,lexica_prior,learning_parame
             type_obs = obs[parent_type] #Parent production data            
 
             lhs = get_likelihood(type_obs,sender_matrices, negation_rate) #P(parent data|t_i) for all types
+
+            
+
             post = normalize(lexica_prior * np.transpose(lhs)) #P(t_j|parent data) for all types; P(t_j)*P(d|t_j)
+
+
             
             
             parametrized_post = normalize(post**learning_parameter)

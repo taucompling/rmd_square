@@ -42,9 +42,9 @@ def get_lexica(s_amount, m_amount, max_message, target_lex, competitor_lex, mutu
     target_index, competitor_index = [], []
     columns = list(product([0., 1.], repeat=s_amount)) 
 
-    if puzzle:
-        columns.remove(tuple(np.zeros(s_amount)))  # remove message false of all states
-        columns.remove(tuple(np.ones(s_amount)))  # remove message true of all states
+
+    columns.remove(tuple(np.zeros(s_amount)))  # remove message false of all states
+    columns.remove(tuple(np.ones(s_amount)))  # remove message true of all states
 
     if puzzle and s_amount == 3:
         columns.remove((1, 0, 1))
@@ -123,7 +123,7 @@ def get_lexica_bins(lexica_list, states, puzzle):
 
     return bins
 
-def get_prior(lexica_list, puzzle, cost_dict):
+def get_prior(lexica_list, puzzle, cost_dict, only_prag):
     """Calculates prior over lexicon
 
     :param lexica_list: list of lexica
@@ -141,6 +141,8 @@ def get_prior(lexica_list, puzzle, cost_dict):
                 continue
             lex_val *= cost_dict[tuple(concept)]
         out.append(lex_val)
-    if not puzzle:
+    
+    if not only_prag:
         out = out + out  # double for two types of linguistic behavior
+
     return np.array(out) / np.sum(out)
