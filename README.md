@@ -36,6 +36,8 @@ You can find the example file `example.yaml` in the `configs` folder. Use this o
 
 The results get stored in a folder (name specified in the yaml).
 
+You can define your own cost functions if you set `cost` in the yaml to new_approach and adjust the cost function in `message_cost.py` at new_approach.
+
 ## Contents
 ------------
 The folder structure is as follows:
