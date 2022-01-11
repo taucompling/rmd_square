@@ -2,7 +2,7 @@ RMD:
   general_settings:
     alpha: 1                                        # rate to control difference between semantic and pragmatic violations
     lam: 20                                         # soft-max parameter for speaker/hearer matrices
-    k: 15                                           # length of observation sequences
+    k: 5                                            # length of observation sequences
     sample_amount: 50                               # amount of k-length samples for each production type
     learning_parameter: 15                          # prob-matching = 1, increments approach MAP
 
@@ -11,7 +11,7 @@ RMD:
 
   states_and_messages:
     states: 3                                       # number of states
-    messages: [2,3,4]                               # list with number of messages
+    messages: [3]                                   # list with number of messages
 
   models:
     kind: "rmd"                                     # "rmd" (replicator-mutator-dynamics), "r" (only replicator), "m" (only mutator)
@@ -23,7 +23,7 @@ RMD:
     utility_message_cost: False                     # takes also costs for messages for the communicative success into account 
     negation_rate: False                            # percentage of negated statements sampled in the mutator dynamics 
 
-    puzzle: False                                   # if True, only allows for the 4 corners from the typological puzzle and pragmatic players
+    puzzle: True                                    # if True, only allows for the 4 corners from the typological puzzle and pragmatic players
     only_prag: True                                 # only pragmatic players
 
     mutual_exclusivity: False                       # if True, no concept assigned to more than one message
@@ -32,18 +32,13 @@ RMD:
     result_path: "example_folder"                   # path to store results
 
   plotting_info:
-    print_x: 0                                      # number of best types to show in the result plots, if 0 no plots at all             
-    target_lex: [[1, 1, 0], [0, 1, 0], [0,0,0], [0,0,0]]          # lexicon of target type (to show in plot)
-    #target_lex: [[1, 1], [0, 1], [0,0], [0,0]] 
-    #target_lex: [[1], [1], [0]]
+    print_x: 2                                                    # number of best types to show in the result plots, if 0 no plots at all             
+    target_lex: [[1, 0, 0], [0, 1, 0], [0,1,1]]          # lexicon of target type (to show in plot)
     target_level: ["pragmatic"]                                   # level (literal or pragmatic) of target type
 
-    competitor_lex: [[1, 1, 0], [0, 1, 1], [0,0,0], [0,0,0]]      # lexicon of competitor type (to show in plot)
-    #competitor_lex: [[1, 1], [0, 1], [0,0], [0,0]] 
-    #competitor_lex: [[1], [1], [0]]
+    competitor_lex: [[1, 1, 0], [0, 1, 0], [0,0,1]]      # lexicon of competitor type (to show in plot)
     competitor_level: ["pragmatic"]                               # level (literal or pragmatic) of competitor type
   
-
 
 
 
