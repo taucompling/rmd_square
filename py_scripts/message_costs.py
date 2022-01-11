@@ -67,10 +67,10 @@ def calculate_cost_dict(cost, states, puzzle):
 
     elif cost == "new_approach":
 
-        cost_dict = {(0,0,1): 10, # all
-                    (0,1,1): 10,  # some
-                    (1,1,0):8,    # not all
-                    (1,0,0): 8,   # none
+        cost_dict = {(0,0,1): 8, # all
+                    (0,1,1): 8,  # some
+                    (1,1,0):10,    # not all
+                    (1,0,0): 10,   # none
                     (1,0, 1): 20, (0,1,0): 20, # none or all, some but not all
                     
                     (0,1):1, (1,0):1,  # for two states

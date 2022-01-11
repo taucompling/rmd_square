@@ -35,7 +35,9 @@ def get_utils(typeList, all_messages, states, lam,alpha,mutual_exclusivity, resu
         return np.genfromtxt("%s/matrices/umatrix-%s-s%s-m%s-lam%d-a%d-me%s-umc%s.csv" %(result_path, str(state_priors.flatten()), str(states), str(messages),lam,alpha,str(mutual_exclusivity), utility_message_cost),delimiter=',')
         
     else:
+        
         print('# Computing utilities,\t\t', datetime.datetime.now().replace(microsecond=0))
+        
         out = np.zeros([len(typeList), len(typeList)])
         for i in range(len(typeList)):
             #print(f"# {round((i/len(typeList)) * 100)}% - " ,i, f"/{len(typeList)} utilities", '', end='\r')

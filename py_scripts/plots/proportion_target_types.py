@@ -39,5 +39,5 @@ def get_target_types(best, bins,  target_bins, competitor_bins, all_progress, re
     plt.xlabel("types")
     plt.legend()
 
-    plt.show()
     plt.savefig(f'{result_path}/results/proportion_targets_and_competitors.png')
+    

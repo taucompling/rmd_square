@@ -5,6 +5,8 @@ from tqdm import tqdm
 import datetime
 import csv
 import os.path
+import time
+import random
 
 
 # import other scripts
@@ -18,18 +20,18 @@ from py_scripts.utils import print_end_results, get_type_bin, get_lexica_represe
 from py_scripts.checks import check_state_priors, check_print_x, check_only_prag
 
 # import plotting scripts
-from py_scripts.plots.informativesness_score import get_informativeness
 from py_scripts.plots.plot_progress import plot_progress
-from py_scripts.plots.plot_all_sizes import plot_all_sizes
 from py_scripts.plots.x_best_prag_lit import print_best_x_types_to_file
 from py_scripts.plots.proportion_target_types import get_target_types
 
 
-def run_dynamics(general_settings, states_and_messages, models, other_features, storing_results, plotting_info, grid_state_priors=False):
+def run_dynamics(general_settings, states_and_messages, models, other_features, storing_results, plotting_info, rt=False, grid_state_priors=False):
 
     """Runs the replicator mutator dynamics"""
-
+    start = time.time()
+    
     print('# Starting,\t\t\t', datetime.datetime.now().replace(microsecond=0))
+    
 
     # setting parameters 
     alpha, lam, k  = general_settings["alpha"], general_settings["lam"], general_settings["k"]
@@ -44,6 +46,7 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
     puzzle, only_prag, mutual_exclusivity = other_features["puzzle"], other_features["only_prag"], other_features["mutual_exclusivity"]
 
     check_only_prag(only_prag, puzzle)
+
     if puzzle:
         only_prag = True
 
@@ -72,12 +75,14 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
     # get  bins
     bins = get_lexica_bins(lexica, states, puzzle) # bin types with identical lexica
 
-    target_bins = get_target_bins(target_index[0], bins, target_level, len(lexica), puzzle) if print_x > 0 else None
-    competitor_bins = get_target_bins(competitor_index[0], bins, competitor_level, len(lexica), puzzle) if print_x > 0 else None
+    target_bins = get_target_bins(target_index, bins, target_level, len(lexica), puzzle) if print_x > 0 else None
+    competitor_bins = get_target_bins(competitor_index, bins, competitor_level, len(lexica), puzzle) if print_x > 0 else None
 
     # get costs and prios
     message_costs = calculate_cost_dict(cost, states, puzzle)   
     l_prior = get_prior(lexica, puzzle, message_costs, only_prag) 
+
+
 
     # get type_list
     if only_prag:
@@ -114,7 +119,9 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
        
     
     # starts to calculate generations and runs    
+    
     print('# Beginning multiple runs,\t', datetime.datetime.now().replace(microsecond=0))
+    
     p_sum = np.zeros(len(typeList)) # vector to store mean across runs
 
     gen_winners = [[None], 0] # to count winners in generations
@@ -210,17 +217,14 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
         os.system("rm -rf experiments")
         return
 
-    # plotting things
-    get_informativeness(pPrime, typeList, bins, result_path)
-
     if print_x > 0:
-        plot_all_sizes(progress, print_x, result_path, lexica, puzzle)
-        # plot_progress(progress, print_x, result_path, lexica, puzzle)                 
-        #print_best_x_types_to_file(p_mean, lexica,result_path, print_x, puzzle)
+        plot_progress(progress, print_x, result_path, lexica, puzzle)                 
+        print_best_x_types_to_file(p_mean, lexica,result_path, print_x, puzzle)
         average_best = round(bin_orders[bin_winner][0]/bin_orders[bin_winner][1],4)
-        # get_target_types(average_best, bins, target_bins, competitor_bins, all_progress, result_path)
+        get_target_types(average_best, bins, target_bins, competitor_bins, all_progress, result_path)
 
-
+    
+    
     best_x = np.argpartition(p_mean, -print_x)[-print_x:] if print_x > 0 else np.argpartition(p_mean, -10)[-10:] # ascending order
     sorted_best_x = np.flip(best_x[np.argsort(p_mean[best_x])]) #descending order
 
@@ -229,12 +233,16 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
 
     for typ in sorted_best_x:
         end_results.append(f"-Type {typ} with proportion {p_mean[typ]}\n")
-        end_results.append(f"{(get_lexica_representations(typ, lexica, puzzle))}\n")
+        end_results.append(f"{(get_lexica_representations(typ, lexica, only_prag))}\n")
     
     print("# Finished:\t\t\t", datetime.datetime.now().replace(microsecond=0))
+    
+    end_t= time.time()
+
     for line in end_results:
         print(line)
     with open(f"{result_path}/results/end_results.txt", "w") as end:
         end.writelines(end_results)
+    
 
-    os.system("rm -rf result_path")
+    return end_t - start

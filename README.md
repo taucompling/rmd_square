@@ -57,9 +57,7 @@ RMD
 │   ├── mutual_utility.py
 │   ├── player.py
 │   ├── plots
-│   │   ├── informativesness_score.py
 │   │   ├── __init__.py
-│   │   ├── plot_all_sizes.py
 │   │   ├── plot_progress.py
 │   │   ├── proportion_target_types.py
 │   │   └── x_best_prag_lit.py

@@ -113,7 +113,9 @@ def get_mutation_matrix(s_amount,m_amount, typeList,lexica_prior,learning_parame
         return np.genfromtxt('%s/matrices/qmatrix-%s-s%s-m%s-lam%d-a%d-k%d-samples%d-l%d-me%s.csv' 
                %(result_path, str(state_priors), str(s_amount),str(m_amount),lam,alpha,k,sample_amount,learning_parameter,str(mutual_exclusivity)), delimiter=',')
     else:
+        
         print('# Computing mutation matrix,\t', datetime.datetime.now().replace(microsecond=0))
+        
         sender_matrices = [t.sender_matrix for t in typeList]
 
         obs = get_obs(s_amount, m_amount, k, typeList ,sample_amount, negation_rate) # get production data from all types
