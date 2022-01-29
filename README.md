@@ -1,16 +1,14 @@
-# Replicator-Mutator-Dynamics
-Original paper: https://onlinelibrary.wiley.com/doi/full/10.1111/cogs.12681
+# RMD_Square
 
-Game-theoretic model of competition between types of language users, each endowed with certain lexical representations and a particular pragmatic disposition to act on them. 
+The typology of lexicalizations in natural languages is highly skewed: some meanings repeatedly receive their own expression as individual morphemes or words in language after language, while many other meanings rarely or never do. For example, while many languages have monomorphemic counterparts of English *some* and *all*, no known language has a monomorphemic quantifier that means *all or none* or a quantifier that asserts that its two arguments are of the same cardinality. It seems tempting to reason from this typological skew to properties of stored representations. However, it is not generally safe to assume that if something is typologically unattested then it simply cannot be represented or learned. The representational system for stored denotations is just one of several interacting factors that affect the typology, and other factors such as communicative pressure and learnability are likely to shape patterns of lexicalization. In this paper we propose to reason from the typology to stored representations by modeling the representational framework, communicative pressure, and learnability directly within an evolutionary model, building on work by Brochhagen, Franke at al (https://onlinelibrary.wiley.com/doi/full/10.1111/cogs.12681). Our empirical focus is a lexicalization asymmetry noted by Horn (1972) in the domain of logical operators and framed within the Aristotelian Square of Opposition. We show that, on certain assumptions, Horn's lexicalization pattern depends on very particular representational costs in the lexicon: it arises if the storage costs for *every* and *some* are lower than those for *not every* and *not some* but not otherwise. 
 
-Includes extensions like other cost functions, different inventories, different calculation of mutual utility, grid searches etc.
 
 ## Setup for usage
 ------------
 ### Cloning the project
 
 In order to run tests, clone the repository and cd into the
-`RMD` folder. 
+`rmd_square` folder. 
 
 ### Installation
 
