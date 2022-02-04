@@ -225,7 +225,7 @@ def run_dynamics(general_settings, states_and_messages, models, other_features, 
 
     
     
-    best_x = np.argpartition(p_mean, -print_x)[-print_x:] if print_x > 0 else np.argpartition(p_mean, -10)[-10:] # ascending order
+    best_x = np.argpartition(p_mean, -print_x)[-print_x:] if print_x > 0 else np.argpartition(p_mean, -4)[-4:] # ascending order
     sorted_best_x = np.flip(best_x[np.argsort(p_mean[best_x])]) #descending order
 
 
